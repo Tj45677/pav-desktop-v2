@@ -8,6 +8,7 @@ type TaskbarIconProps = {
   icon: string;
   windowState: WindowState;
   onClick: (appId: AppId) => void;
+  iconRef?: (element: HTMLDivElement | null) => void;
 };
 
 export default function TaskbarIcon({
@@ -16,11 +17,13 @@ export default function TaskbarIcon({
   icon,
   windowState,
   onClick,
+  iconRef,
 }: TaskbarIconProps) {
 
 const [isHovered, setIsHovered] = useState(false);
   return (
     <div
+      ref={iconRef}
       style={{
         position: "relative",
         width: "40px",

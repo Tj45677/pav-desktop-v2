@@ -6,6 +6,8 @@ type WindowProps = {
   isFocused: boolean;
   isMaximized?: boolean;
   isClosing?: boolean;
+  isOpening?: boolean;
+  isMinimizing?: boolean;
   borderRadius?: string;
   titleBarBackground?: string;
   windowBackground?: string;
@@ -36,15 +38,12 @@ function MaximizeIcon() {
 function RestoreIcon() {
   return (
     <svg viewBox="0 0 12 12" width="15" height="15" aria-hidden="true">
-      {/* back window */}
       <path
         d="M3 1.5h6v6"
         fill="none"
         stroke="currentColor"
         strokeWidth="1"
       />
-
-      {/* front window */}
       <rect
         x="1.5"
         y="3"
@@ -64,6 +63,8 @@ export default function Window({
   isFocused,
   isMaximized = false,
   isClosing = false,
+  isOpening = false,
+  isMinimizing = false,
   borderRadius = "8px",
   titleBarBackground = "#f3f3f3",
   windowBackground = "#ffffff",
@@ -93,8 +94,14 @@ export default function Window({
         borderRadius: isMaximized ? "0px" : borderRadius,
         overflow: "hidden",
         backgroundColor: windowBackground,
-        opacity: isClosing ? 0 : 1,
-        transform: isClosing ? "scale(0.96)" : "scale(1)",
+        opacity: isClosing || isMinimizing ? 0 : isOpening ? 0 : 1,
+        transform: isClosing
+          ? "scale(0.96)"
+          : isMinimizing
+            ? "scale(0.92)"
+            : isOpening
+              ? "scale(0.98)"
+              : "scale(1)",
         transition: "opacity 0.18s ease, transform 0.18s ease",
         transformOrigin: "center center",
       }}

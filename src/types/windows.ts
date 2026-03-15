@@ -6,6 +6,12 @@ export type WindowState = {
     isMinimized: boolean;
     isFocused: boolean;
     isMaximized: boolean;
+    isClosing: boolean;
+    isOpening: boolean;
+    isMinimizing: boolean;
+    isRestoring: boolean;
+    isMaximizing: boolean;
+    isShrinking: boolean;
     x: number;
     y: number;
     zIndex: number;

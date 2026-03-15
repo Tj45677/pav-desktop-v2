@@ -1,13 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Taskbar from "@/components/desktop/Taskbar";
 import Window from "@/components/desktop/Window"; 
 import { initialWindowState } from "@/config/windowState";
 import { desktopApps } from "@/config/apps";
+import DesktopEasterEgg from "@/components/desktop/DesktopEasterEgg";
 
 export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
+    const taskbarIconElements = useRef<Partial<Record<keyof typeof windows, HTMLDivElement | null>>>({});
+    const windowElements = useRef<Partial<Record<keyof typeof windows, HTMLDivElement | null>>>({});
+
+const taskbarIconRefs: Partial<Record<keyof typeof windows, (element: HTMLDivElement | null) => void>> = {
+  terminal: (element) => {
+    taskbarIconElements.current.terminal = element;
+  },
+  chrome: (element) => {
+    taskbarIconElements.current.chrome = element;
+  },
+  music: (element) => {
+    taskbarIconElements.current.music = element;
+  },
+};
+
+const [minimizeTransforms, setMinimizeTransforms] = useState<
+  Partial<Record<keyof typeof windows, string>>
+>({});
 
 const openApp = (appId: keyof typeof windows) => {
   setWindows((prev) => {
@@ -31,6 +50,7 @@ const openApp = (appId: keyof typeof windows) => {
         isOpen: true,
         isMinimized: false,
         isFocused: true,
+        isOpening: true,
         zIndex: highestZIndex + 1,
       };
     } else if (targetWindow.isMinimized) {
@@ -38,6 +58,7 @@ const openApp = (appId: keyof typeof windows) => {
         ...targetWindow,
         isMinimized: false,
         isFocused: true,
+        isOpening: true,
         zIndex: highestZIndex + 1,
       };
     } else if (targetWindow.isFocused) {
@@ -72,6 +93,9 @@ const openApp = (appId: keyof typeof windows) => {
     return updatedWindows;
   });
 };
+
+                                                            // focusapp
+
 
 const focusApp = (appId: keyof typeof windows) => {
   setWindows((prev) => {
@@ -155,6 +179,32 @@ useEffect(() => {
     window.removeEventListener("mouseup", handleMouseUp);
   };
 }, [dragState]);
+
+useEffect(() => {
+  const openingApps = (Object.keys(windows) as (keyof typeof windows)[]).filter(
+    (id) => windows[id].isOpening
+  );
+
+  if (openingApps.length === 0) return;
+
+  const timeout = setTimeout(() => {
+    setWindows((prev) => {
+      const updated = { ...prev };
+
+      openingApps.forEach((id) => {
+        updated[id] = {
+          ...updated[id],
+          isOpening: false,
+        };
+      });
+
+      return updated;
+    });
+  }, 180);
+
+  return () => clearTimeout(timeout);
+}, [windows]);
+
                                                                               //closeapp
 const closeApp = (appId: keyof typeof windows) => {
   setWindows((prev) => ({
@@ -196,13 +246,40 @@ const closeApp = (appId: keyof typeof windows) => {
   }, 180);
 };
 
+                                                                                    //minimizeapp
+
+
 const minimizeApp = (appId: keyof typeof windows) => {
+  const windowElement = windowElements.current[appId];
+  const taskbarIconElement = taskbarIconElements.current[appId];
+
+  if (!windowElement || !taskbarIconElement) return;
+
+  const windowRect = windowElement.getBoundingClientRect();
+  const iconRect = taskbarIconElement.getBoundingClientRect();
+
+  const windowCenterX = windowRect.left + windowRect.width / 2;
+  const windowCenterY = windowRect.top + windowRect.height / 2;
+
+  const iconCenterX = iconRect.left + iconRect.width / 2;
+  const iconCenterY = iconRect.top + iconRect.height / 2;
+
+  const deltaX = iconCenterX - windowCenterX;
+  const deltaY = iconCenterY - windowCenterY;
+
+  const minimizeTransform = `translate(${deltaX}px, ${deltaY}px) scale(0.2)`;
+
+  setMinimizeTransforms((prev) => ({
+    ...prev,
+    [appId]: minimizeTransform,
+  }));
+
   setWindows((prev) => {
     const updatedWindows = {
       ...prev,
       [appId]: {
         ...prev[appId],
-        isMinimized: true,
+        isMinimizing: true,
         isFocused: false,
       },
     };
@@ -223,7 +300,25 @@ const minimizeApp = (appId: keyof typeof windows) => {
 
     return updatedWindows;
   });
+
+  setTimeout(() => {
+    setWindows((prev) => ({
+      ...prev,
+      [appId]: {
+        ...prev[appId],
+        isMinimized: true,
+        isMinimizing: false,
+      },
+    }));
+
+    setMinimizeTransforms((prev) => ({
+      ...prev,
+      [appId]: undefined,
+    }));
+  }, 180);
 };
+
+                                                                                    //maximize app
 
 const maximizeApp = (appId: keyof typeof windows) => {
   setWindows((prev) => {
@@ -273,8 +368,11 @@ return (
             .map((app) => (
               <div
                 key={app.id}
-                  onMouseDown={() => focusApp(app.id)}
-                  style={{
+                ref={(element) => {
+                    windowElements.current[app.id] = element;
+                }}
+                onMouseDown={() => focusApp(app.id)}
+                style={{
                     position: windows[app.id].isMaximized ? "fixed" : "absolute",
                     top: windows[app.id].isMaximized ? "0px" : `${windows[app.id].y}px`,
                     left: windows[app.id].isMaximized ? "0px" : `${windows[app.id].x}px`,
@@ -282,6 +380,13 @@ return (
                     height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : "auto",
                     zIndex: windows[app.id].zIndex,
                     userSelect: "none",
+                    transform: windows[app.id].isMinimizing
+                      ? minimizeTransforms[app.id] ?? "scale(1)"
+                      : "translate(0px, 0px) scale(1)",
+                    transition: windows[app.id].isMinimizing
+                      ? "transform 0.18s ease"
+                      : undefined,
+                    transformOrigin: "center center",
                     
                   }}
                 >
@@ -291,6 +396,8 @@ return (
               isFocused={windows[app.id].isFocused}
               isMaximized={windows[app.id].isMaximized}
               isClosing={windows[app.id].isClosing}
+              isOpening={windows[app.id].isOpening}
+              isMinimizing={windows[app.id].isMinimizing}
               borderRadius="10px"
               titleBarBackground="#f3f3f3"
               windowBackground="#ffffff"
@@ -313,14 +420,15 @@ return (
               color: "white",
             }}
           >
-            PAV Desktop V2
           </div>
         )}
 
       </div> 
     </div>
 
-    <Taskbar openApp={openApp} windows={windows} />
+<DesktopEasterEgg />
+
+    <Taskbar openApp={openApp} windows={windows} iconRefs={taskbarIconRefs} />
     </>
   );
 }

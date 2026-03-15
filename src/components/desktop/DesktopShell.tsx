@@ -7,7 +7,7 @@ export default function DesktopShell({ children }: DesktopShellProps) {
         <main
             style={{
                 minHeight: "100vh",
-                backgroundImage: "url('LAWallpaper.png')",
+                backgroundImage: "url('LAWallpaper.jpg')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",

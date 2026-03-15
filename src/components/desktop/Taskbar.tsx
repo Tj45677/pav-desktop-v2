@@ -8,9 +8,10 @@ import type { WindowStateMap } from "@/types/windows";
 type TaskbarProps = {
   openApp: (appId: AppId) => void;
   windows: WindowStateMap;
+  iconRefs?: Partial<Record<AppId, (element: HTMLDivElement | null) => void>>;
 };
 
-export default function Taskbar({ openApp, windows }: TaskbarProps) {
+export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
     const taskbarApps = desktopApps.filter((app) => app.showInTaskbar);
     const [isStartHovered, setIsStartHovered] = useState(false);
 
@@ -77,6 +78,7 @@ export default function Taskbar({ openApp, windows }: TaskbarProps) {
             icon={app.icon}
             windowState={windows[app.id]}
             onClick={openApp}
+            iconRef={iconRefs?.[app.id]}
             />
         ))}
 
