@@ -5,6 +5,7 @@ type WindowProps = {
   icon: string;
   isFocused: boolean;
   isMaximized?: boolean;
+  isClosing?: boolean;
   borderRadius?: string;
   titleBarBackground?: string;
   windowBackground?: string;
@@ -62,6 +63,7 @@ export default function Window({
   icon,
   isFocused,
   isMaximized = false,
+  isClosing = false,
   borderRadius = "8px",
   titleBarBackground = "#f3f3f3",
   windowBackground = "#ffffff",
@@ -91,6 +93,10 @@ export default function Window({
         borderRadius: isMaximized ? "0px" : borderRadius,
         overflow: "hidden",
         backgroundColor: windowBackground,
+        opacity: isClosing ? 0 : 1,
+        transform: isClosing ? "scale(0.96)" : "scale(1)",
+        transition: "opacity 0.18s ease, transform 0.18s ease",
+        transformOrigin: "center center",
       }}
     >
       <div
