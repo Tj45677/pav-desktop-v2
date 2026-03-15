@@ -1,0 +1,35 @@
+import type { WindowStateMap } from "@/types/windows";
+
+export const initialWindowState: WindowStateMap = {
+    terminal: {
+        appId: "terminal",
+        isOpen: false,
+        isMinimized: false,
+        isFocused: false,
+        isMaximized: false,
+        x: 220,
+        y: 100,
+        zIndex: 1,
+    },
+    chrome: {
+        appId: "chrome",
+        isOpen: false,
+        isMinimized: false,
+        isFocused: false,
+        isMaximized: false,
+        x: 260,
+        y: 120,
+        zIndex: 2,
+    
+    },
+    music: {
+        appId: "music",
+        isOpen: false,
+        isMinimized: false,
+        isFocused: false,
+        isMaximized: false,
+        x: 300,
+        y: 140,
+        zIndex: 3,
+    },
+};
