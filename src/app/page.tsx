@@ -277,7 +277,7 @@ return (
                     height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : "auto",
                     zIndex: windows[app.id].zIndex,
                     userSelect: "none",
-                    transition: "top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease",
+                    
                   }}
                 >
               <Window
