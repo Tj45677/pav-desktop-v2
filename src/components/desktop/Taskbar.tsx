@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { desktopApps } from "@/config/apps";
 import TaskbarIcon from "./TaskbarIcon";
 import type { AppId } from "@/types/apps";
@@ -14,6 +14,26 @@ type TaskbarProps = {
 export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
     const taskbarApps = desktopApps.filter((app) => app.showInTaskbar);
     const [isStartHovered, setIsStartHovered] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setCurrentTime(new Date());
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }, []);
+
+    const formattedTime = currentTime.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const formattedDate = currentTime.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
 
     return (
         <div
@@ -53,7 +73,7 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
                 width: "40px",
                 height: "40px",
                 border: "none",
-                background: isStartHovered ? "rgba(255, 255, 255, 0.06)" : "transparent",
+                background: isStartHovered ? "rgba(255, 255, 255, 0.10)" : "transparent",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -86,12 +106,34 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
 
       <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
           color: "white",
           fontSize: "12px",
           fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
         }}
       >
-        System Tray
+        <span
+          style={{
+            cursor: "default",
+            opacity: 0.8,
+          }}
+        >
+          
+        </span>
+      
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            lineHeight: "1.2",
+          }}
+        >
+          <span>{formattedTime}</span>
+          <span>{formattedDate}</span>
+        </div>
       </div>
     </div>
   );

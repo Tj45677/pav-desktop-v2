@@ -11,6 +11,7 @@ const images = [
 export default function DesktopEasterEgg() {
   const [index, setIndex] = useState(0);
 
+  
 const handleClick = async () => {
   const next = (index + 1) % images.length;
   setIndex(next);
@@ -40,7 +41,8 @@ const handleClick = async () => {
         right: "20px",
         cursor: "pointer",
         userSelect: "none",
-        zIndex: 9999,
+        zIndex: 1
+        ,
       }}
     >
       <img

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Taskbar from "@/components/desktop/Taskbar";
 import Window from "@/components/desktop/Window"; 
 import { initialWindowState } from "@/config/windowState";
@@ -11,6 +11,21 @@ export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
     const taskbarIconElements = useRef<Partial<Record<keyof typeof windows, HTMLDivElement | null>>>({});
     const windowElements = useRef<Partial<Record<keyof typeof windows, HTMLDivElement | null>>>({});
+    const [restoringAppId, setRestoringAppId] = useState<keyof typeof windows | null>(null);
+    const [maximizingAppId, setMaximizingAppId] = useState<keyof typeof windows | null>(null);
+    const maximizeAnimationCleanup = useRef<(() => void) | null>(null);
+
+const [minimizeTransforms, setMinimizeTransforms] = useState<
+  Partial<Record<keyof typeof windows, string>>
+>({});
+
+const [restoreFrom, setRestoreFrom] = useState<
+  Partial<Record<keyof typeof windows, { x: number; y: number } | null>>
+>({});
+
+const [isResizingWindow, setIsResizingWindow] = useState<
+  Partial<Record<keyof typeof windows, boolean>>
+>({});
 
 const taskbarIconRefs: Partial<Record<keyof typeof windows, (element: HTMLDivElement | null) => void>> = {
   terminal: (element) => {
@@ -24,17 +39,83 @@ const taskbarIconRefs: Partial<Record<keyof typeof windows, (element: HTMLDivEle
   },
 };
 
-const [minimizeTransforms, setMinimizeTransforms] = useState<
-  Partial<Record<keyof typeof windows, string>>
->({});
+useLayoutEffect(() => {
+  if (!restoringAppId) return;
 
+  const restorePoint = restoreFrom[restoringAppId];
+  const windowElement = windowElements.current[restoringAppId];
+
+  if (!restorePoint || !windowElement || windows[restoringAppId].isMinimized) return;
+
+  const windowRect = windowElement.getBoundingClientRect();
+  const windowCenterX = windowRect.left + windowRect.width / 2;
+  const windowCenterY = windowRect.top + windowRect.height / 2;
+
+  const deltaX = restorePoint.x - windowCenterX;
+  const deltaY = restorePoint.y - windowCenterY;
+
+  windowElement.style.transition = "none";
+  windowElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.2)`;
+  windowElement.style.transformOrigin = "center center";
+
+  void windowElement.getBoundingClientRect();
+
+  const frame = requestAnimationFrame(() => {
+    windowElement.style.transition = "transform 0.22s ease-in-out";
+    windowElement.style.transform = "translate(0px, 0px) scale(1)";
+  });
+
+  const timeout = setTimeout(() => {
+    setRestoreFrom((prev) => ({
+      ...prev,
+      [restoringAppId]: null,
+    }));
+    setRestoringAppId(null);
+
+    windowElement.style.transition = "";
+    windowElement.style.transform = "";
+    windowElement.style.transformOrigin = "";
+  }, 240);
+
+  return () => {
+    cancelAnimationFrame(frame);
+    clearTimeout(timeout);
+  };
+}, [restoringAppId, restoreFrom, windows]);
+
+
+                                                                                        //openapp
+                                                                                    
 const openApp = (appId: keyof typeof windows) => {
+  const targetBefore = windows[appId];
+  if (targetBefore.isFocused && targetBefore.isOpen && !targetBefore.isMinimized) {
+    minimizeApp(appId);
+    return;
+  }
+
+  if (targetBefore.isMinimized) {
+    const taskbarIconElement = taskbarIconElements.current[appId];
+
+    if (taskbarIconElement) {
+      const iconRect = taskbarIconElement.getBoundingClientRect();
+      const iconCenterX = iconRect.left + iconRect.width / 2;
+      const iconCenterY = iconRect.top + iconRect.height / 2;
+
+      setRestoreFrom((prev) => ({
+        ...prev,
+        [appId]: { x: iconCenterX, y: iconCenterY },
+      }));
+
+      setRestoringAppId(appId);
+    }
+  }
+
   setWindows((prev) => {
     const updatedWindows = { ...prev };
     const targetWindow = updatedWindows[appId];
     const highestZIndex = Math.max(
-    0,
-    ...Object.values(updatedWindows).map((window) => window.zIndex ?? 0)
+      0,
+      ...Object.values(updatedWindows).map((window) => window.zIndex ?? 0)
     );
 
     (Object.keys(updatedWindows) as (keyof typeof updatedWindows)[]).forEach((id) => {
@@ -58,42 +139,17 @@ const openApp = (appId: keyof typeof windows) => {
         ...targetWindow,
         isMinimized: false,
         isFocused: true,
-        isOpening: true,
+        isOpening: false,
         zIndex: highestZIndex + 1,
       };
     } else if (targetWindow.isFocused) {
-      updatedWindows[appId] = {
-        ...targetWindow,
-        isMinimized: true,
-        isFocused: false,
-        zIndex: highestZIndex + 1,
-      };
-
-      const fallbackApp = (Object.keys(updatedWindows) as (keyof typeof updatedWindows)[]).find(
-        (id) =>
-          id !== appId &&
-          updatedWindows[id].isOpen &&
-          !updatedWindows[id].isMinimized
-      );
-
-      if (fallbackApp) {
-        updatedWindows[fallbackApp] = {
-          ...updatedWindows[fallbackApp],
-          isFocused: true,
-        };
-  }
-  } else {
-  updatedWindows[appId] = {
-    ...targetWindow,
-    isFocused: true,
-    zIndex: highestZIndex + 1,
-  };
-}
+      minimizeApp(appId);
+      return prev;
+    }
 
     return updatedWindows;
   });
 };
-
                                                             // focusapp
 
 
@@ -122,6 +178,7 @@ const focusApp = (appId: keyof typeof windows) => {
     return updated;
   });
 };
+
 
                                                                                             //dragging
 
@@ -268,7 +325,7 @@ const minimizeApp = (appId: keyof typeof windows) => {
   const deltaY = iconCenterY - windowCenterY;
 
   const minimizeTransform = `translate(${deltaX}px, ${deltaY}px) scale(0.2)`;
-
+  
   setMinimizeTransforms((prev) => ({
     ...prev,
     [appId]: minimizeTransform,
@@ -318,9 +375,19 @@ const minimizeApp = (appId: keyof typeof windows) => {
   }, 180);
 };
 
+
                                                                                     //maximize app
 
 const maximizeApp = (appId: keyof typeof windows) => {
+  const windowElement = windowElements.current[appId];
+  if (!windowElement) return;
+
+  maximizeAnimationCleanup.current?.();
+
+  const firstRect = windowElement.getBoundingClientRect();
+
+  setMaximizingAppId(appId);
+
   setWindows((prev) => {
     const updatedWindows = { ...prev };
     const highestZIndex = Math.max(
@@ -344,6 +411,50 @@ const maximizeApp = (appId: keyof typeof windows) => {
     };
 
     return updatedWindows;
+  });
+
+  requestAnimationFrame(() => {
+    const element = windowElements.current[appId];
+    if (!element) return;
+
+    const lastRect = element.getBoundingClientRect();
+
+    const deltaX = firstRect.left - lastRect.left;
+    const deltaY = firstRect.top - lastRect.top;
+    const scaleX = firstRect.width / lastRect.width;
+    const scaleY = firstRect.height / lastRect.height;
+
+    element.style.transition = "none";
+    element.style.transformOrigin = "top left";
+    element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`;
+    element.style.filter = "blur(2px)";
+
+    void element.getBoundingClientRect();
+
+    const frame = requestAnimationFrame(() => {
+      element.style.transition =
+        "transform 0.18s ease, filter 0.12s ease";
+      element.style.transform = "translate(0px, 0px) scale(1, 1)";
+      element.style.filter = "blur(5px)";
+    });
+
+    const timeout = setTimeout(() => {
+      element.style.transition = "";
+      element.style.transform = "";
+      element.style.transformOrigin = "";
+      element.style.filter = "";
+      setMaximizingAppId(null);
+    }, 220);
+
+    maximizeAnimationCleanup.current = () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timeout);
+      element.style.transition = "";
+      element.style.transform = "";
+      element.style.transformOrigin = "";
+      element.style.filter = "";
+      setMaximizingAppId(null);
+    };
   });
 };
 
@@ -373,22 +484,22 @@ return (
                 }}
                 onMouseDown={() => focusApp(app.id)}
                 style={{
-                    position: windows[app.id].isMaximized ? "fixed" : "absolute",
-                    top: windows[app.id].isMaximized ? "0px" : `${windows[app.id].y}px`,
-                    left: windows[app.id].isMaximized ? "0px" : `${windows[app.id].x}px`,
-                    width: windows[app.id].isMaximized ? "100vw" : "auto",
-                    height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : "auto",
-                    zIndex: windows[app.id].zIndex,
-                    userSelect: "none",
-                    transform: windows[app.id].isMinimizing
-                      ? minimizeTransforms[app.id] ?? "scale(1)"
-                      : "translate(0px, 0px) scale(1)",
-                    transition: windows[app.id].isMinimizing
-                      ? "transform 0.18s ease"
-                      : undefined,
-                    transformOrigin: "center center",
-                    
-                  }}
+                  position: windows[app.id].isMaximized ? "fixed" : "absolute",
+                  top: windows[app.id].isMaximized ? "0px" : `${windows[app.id].y}px`,
+                  left: windows[app.id].isMaximized ? "0px" : `${windows[app.id].x}px`,
+                  width: windows[app.id].isMaximized ? "100vw" : "auto",
+                  height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : "auto",
+                  zIndex: windows[app.id].zIndex,
+                  userSelect: "none",
+                  transform: windows[app.id].isMinimizing
+                    ? minimizeTransforms[app.id] ?? "translate(0px, 0px) scale(1)"
+                    : "translate(0px, 0px) scale(1)",
+                  transition: windows[app.id].isMinimizing
+                    ? "transform 0.18s ease"
+                    : "top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease, filter 0.12s ease",
+                  filter: isResizingWindow[app.id] ? "blur(2px)" : "blur(0px)",
+                  transformOrigin: "center center",
+}}
                 >
               <Window
               title={app.title}

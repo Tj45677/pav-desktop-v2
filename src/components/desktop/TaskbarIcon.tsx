@@ -43,7 +43,7 @@ const [isHovered, setIsHovered] = useState(false);
                 ? "rgba(255,255,255,0.18)"
                 : "rgba(255,255,255,0.14)"
             : isHovered
-                ? "rgba(255,255,255,0.06)"
+                ? "rgba(255,255,255,0.10)"
                 : windowState.isOpen
                     ? "transparent"
                     : "transparent",
@@ -72,9 +72,9 @@ const [isHovered, setIsHovered] = useState(false);
             bottom: "-2px",
             left: "50%",
             transform: "translateX(-50%)",
-            width: windowState.isFocused ? "18px" : "10px",
+            width: windowState.isFocused ? "18px" : "7px",
             height: "3px",
-            backgroundColor: "white",
+            backgroundColor: "#ffffff83",
             borderRadius: "999px",
             transition: "width 0.15s ease",
           }}
