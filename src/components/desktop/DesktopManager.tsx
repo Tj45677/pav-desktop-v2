@@ -6,7 +6,8 @@ import Window from "@/components/desktop/Window";
 import { initialWindowState } from "@/config/windowState";
 import { desktopApps } from "@/config/apps";
 import DesktopEasterEgg from "@/components/desktop/DesktopEasterEgg";
-import ChromeApp, { ChromeTitleBar } from "@/components/apps/ChromeApp";
+import { ChromeApp, ChromeTitleBar } from "@/components/apps/ChromeApp";
+
 
 
 export default function DesktopManager() {
@@ -16,6 +17,7 @@ export default function DesktopManager() {
     const [restoringAppId, setRestoringAppId] = useState<keyof typeof windows | null>(null);
     const [maximizingAppId, setMaximizingAppId] = useState<keyof typeof windows | null>(null);
     const maximizeAnimationCleanup = useRef<(() => void) | null>(null);
+    const [chromeTab, setChromeTab] = useState<"merch" | "about">("merch");
 
 const [minimizeTransforms, setMinimizeTransforms] = useState<
   Partial<Record<keyof typeof windows, string>>
@@ -40,6 +42,7 @@ const taskbarIconRefs: Partial<Record<keyof typeof windows, (element: HTMLDivEle
     taskbarIconElements.current.music = element;
   },
 };
+
 
 useLayoutEffect(() => {
   if (!restoringAppId) return;
@@ -89,7 +92,7 @@ useLayoutEffect(() => {
 const renderAppContent = (appId: keyof typeof windows) => {
   switch (appId) {
     case "chrome":
-      return <ChromeApp />;
+      return <ChromeApp activeTab={chromeTab} />;
     default:
       return <div>{appId} Window</div>;
   }
@@ -480,6 +483,7 @@ const maximizeApp = (appId: keyof typeof windows) => {
   });
 };
 
+
 return (
   <>
     <div
@@ -529,30 +533,33 @@ return (
                   transformOrigin: "center center",
 }}
                 >
-              <Window
-              title={app.title}
-              icon={app.icon}
-              isFocused={windows[app.id].isFocused}
-              isMaximized={windows[app.id].isMaximized}
-              isClosing={windows[app.id].isClosing}
-              isOpening={windows[app.id].isOpening}
-              isMinimizing={windows[app.id].isMinimizing}
-              borderRadius="10px"
-              titleBarBackground="#f3f3f3"
-              titleBarContent={
-                app.id === "chrome" ? <ChromeTitleBar /> :
-              //  app.id === "music" ? <MusicTitleBar /> :
-                undefined
-              }
-              windowBackground="#ffffff"
-              onTitleBarMouseDown={(event) => startDrag(event, app.id)}
-              onTitleBarDoubleClick={() => maximizeApp(app.id)}
-              onMinimize={() => minimizeApp(app.id)}
-              onMaximize={() => maximizeApp(app.id)}
-              onClose={() => closeApp(app.id)}
-              >
-              {renderAppContent(app.id)}
-              </Window>
+                <Window
+                  title={app.title}
+                  icon={app.icon}
+                  isFocused={windows[app.id].isFocused}
+                  isMaximized={windows[app.id].isMaximized}
+                  isClosing={windows[app.id].isClosing}
+                  isOpening={windows[app.id].isOpening}
+                  isMinimizing={windows[app.id].isMinimizing}
+                  borderRadius="10px"
+                  titleBarBackground="#f3f3f3"
+                  titleBarContent={
+                    app.id === "chrome" ? (
+                      <ChromeTitleBar
+                        activeTab={chromeTab}
+                        onTabChange={setChromeTab}
+                      />
+                    ) : undefined
+                  }
+                  windowBackground="#ffffff"
+                  onTitleBarMouseDown={(event) => startDrag(event, app.id)}
+                  onTitleBarDoubleClick={() => maximizeApp(app.id)}
+                  onMinimize={() => minimizeApp(app.id)}
+                  onMaximize={() => maximizeApp(app.id)}
+                  onClose={() => closeApp(app.id)}
+                >
+                  {renderAppContent(app.id)}
+                </Window>
               </div>
           );
         })}
