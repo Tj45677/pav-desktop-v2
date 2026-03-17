@@ -3,6 +3,7 @@ import { desktopApps } from "@/config/apps";
 import TaskbarIcon from "./TaskbarIcon";
 import type { AppId } from "@/types/apps";
 import type { WindowStateMap } from "@/types/windows";
+import StartMenu from "./StartMenu";
 
 
 type TaskbarProps = {
@@ -15,6 +16,7 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
     const taskbarApps = desktopApps.filter((app) => app.showInTaskbar);
     const [isStartHovered, setIsStartHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
 
     useEffect(() => {
       const interval = setInterval(() => {
@@ -36,6 +38,10 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
     });
 
     return (
+        <>
+        {isStartMenuOpen && (
+          <StartMenu onClose={() => setIsStartMenuOpen(false)} />
+        )}
         <div
             style={{
                 position: "fixed",
@@ -52,6 +58,8 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
                 justifyContent: "space-between",
                 padding: "0 10px",
                 boxSizing: "border-box",
+                userSelect: "none",
+                zIndex: 9999,
             }}
         >
             <div
@@ -62,12 +70,17 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
         }}
       >
         <button
+
             onMouseEnter={() => setIsStartHovered(true)}
             onMouseLeave={(e) => {
                 setIsStartHovered(false);
                 e.currentTarget.style.transform = "scale(1)";
             }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.92)")}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.currentTarget.style.transform = "scale(0.92)";
+              setIsStartMenuOpen((prev) => !prev);
+            }}
             onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
             style={{
                 width: "40px",
@@ -136,5 +149,6 @@ export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
         </div>
       </div>
     </div>
+     </>
   );
 }

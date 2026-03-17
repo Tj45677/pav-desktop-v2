@@ -6,6 +6,8 @@ import Window from "@/components/desktop/Window";
 import { initialWindowState } from "@/config/windowState";
 import { desktopApps } from "@/config/apps";
 import DesktopEasterEgg from "@/components/desktop/DesktopEasterEgg";
+import ChromeApp, { ChromeTitleBar } from "@/components/apps/ChromeApp";
+
 
 export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
@@ -77,16 +79,30 @@ useLayoutEffect(() => {
     windowElement.style.transformOrigin = "";
   }, 240);
 
+
   return () => {
     cancelAnimationFrame(frame);
     clearTimeout(timeout);
   };
 }, [restoringAppId, restoreFrom, windows]);
 
+const renderAppContent = (appId: keyof typeof windows) => {
+  switch (appId) {
+    case "chrome":
+      return <ChromeApp />;
+    default:
+      return <div>{appId} Window</div>;
+  }
+};
 
                                                                                         //openapp
                                                                                     
 const openApp = (appId: keyof typeof windows) => {
+
+  const appConfig = desktopApps.find((app) => app.id === appId);
+  const defaultWidth = appConfig?.defaultWidth ?? 900;
+  const defaultHeight = appConfig?.defaultHeight ?? 600;
+
   const targetBefore = windows[appId];
   if (targetBefore.isFocused && targetBefore.isOpen && !targetBefore.isMinimized) {
     minimizeApp(appId);
@@ -114,6 +130,7 @@ const openApp = (appId: keyof typeof windows) => {
     const updatedWindows = { ...prev };
     const targetWindow = updatedWindows[appId];
     const highestZIndex = Math.max(
+    
       0,
       ...Object.values(updatedWindows).map((window) => window.zIndex ?? 0)
     );
@@ -126,14 +143,19 @@ const openApp = (appId: keyof typeof windows) => {
     });
 
     if (!targetWindow.isOpen) {
+      const centeredX = Math.max(0, (window.innerWidth - defaultWidth) / 2);
+      const centeredY = Math.max(0, (window.innerHeight - 48 - defaultHeight) / 2);
+    
       updatedWindows[appId] = {
         ...targetWindow,
         isOpen: true,
         isMinimized: false,
         isFocused: true,
         isOpening: true,
+        x: centeredX,
+        y: centeredY,
         zIndex: highestZIndex + 1,
-      };
+  };
     } else if (targetWindow.isMinimized) {
       updatedWindows[appId] = {
         ...targetWindow,
@@ -476,7 +498,11 @@ return (
       > 
           {desktopApps
             .filter((app) => windows[app.id].isOpen && !windows[app.id].isMinimized) 
-            .map((app) => (
+            .map((app) => {
+                const defaultWidth = app.defaultWidth ?? 900;
+                const defaultHeight = app.defaultHeight ?? 600;
+
+                return (
               <div
                 key={app.id}
                 ref={(element) => {
@@ -487,16 +513,18 @@ return (
                   position: windows[app.id].isMaximized ? "fixed" : "absolute",
                   top: windows[app.id].isMaximized ? "0px" : `${windows[app.id].y}px`,
                   left: windows[app.id].isMaximized ? "0px" : `${windows[app.id].x}px`,
-                  width: windows[app.id].isMaximized ? "100vw" : "auto",
-                  height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : "auto",
+                  width: windows[app.id].isMaximized ? "100vw" : `${defaultWidth}px`,
+                  height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : `${defaultHeight}px`,
                   zIndex: windows[app.id].zIndex,
                   userSelect: "none",
                   transform: windows[app.id].isMinimizing
                     ? minimizeTransforms[app.id] ?? "translate(0px, 0px) scale(1)"
                     : "translate(0px, 0px) scale(1)",
-                  transition: windows[app.id].isMinimizing
-                    ? "transform 0.18s ease"
-                    : "top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease, filter 0.12s ease",
+                  transition: dragState?.appId === app.id
+                    ? "none"
+                    : windows[app.id].isMinimizing
+                      ? "transform 0.18s ease"
+                      : "top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease, filter 0.12s ease",
                   filter: isResizingWindow[app.id] ? "blur(2px)" : "blur(0px)",
                   transformOrigin: "center center",
 }}
@@ -511,6 +539,11 @@ return (
               isMinimizing={windows[app.id].isMinimizing}
               borderRadius="10px"
               titleBarBackground="#f3f3f3"
+              titleBarContent={
+                app.id === "chrome" ? <ChromeTitleBar /> :
+              //  app.id === "music" ? <MusicTitleBar /> :
+                undefined
+              }
               windowBackground="#ffffff"
               onTitleBarMouseDown={(event) => startDrag(event, app.id)}
               onTitleBarDoubleClick={() => maximizeApp(app.id)}
@@ -518,10 +551,11 @@ return (
               onMaximize={() => maximizeApp(app.id)}
               onClose={() => closeApp(app.id)}
               >
-              <div>{app.title} Window</div>
+              {renderAppContent(app.id)}
               </Window>
-            </div>
-            ))}
+              </div>
+          );
+        })}
 
         {!windows.chrome.isOpen && !windows.music.isOpen && !windows.terminal.isOpen && ( 
           <div

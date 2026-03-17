@@ -13,11 +13,15 @@ export const desktopApps: DesktopApp[] = [
         title: "Google Chrome",
         icon: '/chrome.png',
         showInTaskbar: true,
+        defaultWidth: 1000,
+        defaultHeight: 650,
     },
     {
         id: "music",
         title: "iTunes",
         icon: "itunes.png",
         showInTaskbar: true,
+        defaultWidth: 980,
+        defaultHeight: 640,
     },
 ];

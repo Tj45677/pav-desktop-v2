@@ -8,9 +8,11 @@ type WindowProps = {
   isClosing?: boolean;
   isOpening?: boolean;
   isMinimizing?: boolean;
+  hideTitleBar?: boolean;
   borderRadius?: string;
   titleBarBackground?: string;
   windowBackground?: string;
+  titleBarContent?: React.ReactNode;
   onMinimize?: () => void;  
   onMaximize?: () => void;  
   onClose?: () => void;
@@ -65,9 +67,11 @@ export default function Window({
   isClosing = false,
   isOpening = false,
   isMinimizing = false,
+  hideTitleBar = false,
   borderRadius = "8px",
   titleBarBackground = "#f3f3f3",
   windowBackground = "#ffffff",
+  titleBarContent,
   onMinimize,
   onMaximize,
   onClose,
@@ -83,9 +87,9 @@ export default function Window({
   return (
     <div
       style={{
-        width: isMaximized ? "100%" : "900px",
-        height: isMaximized ? "100%" : "auto",
-        maxWidth: isMaximized ? "100%" : "90vw",
+        width: "100%",
+        height: "100%",
+        maxWidth: "none",
         color: "black",
         border: isFocused ? "1px solid #cfcfcf" : "1px solid #888",
         boxShadow: isFocused
@@ -122,19 +126,25 @@ export default function Window({
         }}
     >
         <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-            }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flex: 1,
+            minWidth: 0,
+          }}
         >
-        <img
-          src={icon}
-          alt={title}
-          style={{ width: "16px", height: "16px" }}
-        />
-        <span>{title}</span>
-      </div>
+          {titleBarContent ?? (
+            <>
+              <img
+                src={icon}
+                alt={title}
+                style={{ width: "16px", height: "16px" }}
+              />
+              <span>{title}</span>
+            </>
+          )}
+        </div>
               <div
             style={{
                 display: "flex",
@@ -219,7 +229,7 @@ export default function Window({
 
       <div
         style={{
-          padding: "18px",
+          padding: "0px",
           fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
           fontSize: "16px",
           backgroundColor: windowBackground,
