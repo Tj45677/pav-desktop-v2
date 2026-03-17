@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 
 export type MusicView = "recently-added" | "albums" | "songs" | "artists";
 
@@ -24,6 +24,8 @@ export type MusicRelease = {
     title: string;
   }[];
 };
+
+
 
 type MusicTitleBarProps = {
   activeTrack?: MusicTrack | null;
@@ -80,6 +82,94 @@ const fallbackReleases: MusicRelease[] = [
   },
 ];
 
+const ReleaseCard = memo(function ReleaseCard({
+  release,
+  isSelected,
+  onClick,
+}: {
+  release: MusicRelease;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        textAlign: "left",
+        cursor: "default",
+        transform: isSelected ? "translateY(-3px)" : "translateY(0px)",
+        transition: "transform 0.16s ease",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          aspectRatio: "1 / 1",
+          borderRadius: "12px",
+          overflow: "hidden",
+          backgroundColor: "#e9e9e9",
+          boxShadow: isSelected
+            ? "0 10px 18px rgba(0,0,0,0.18)"
+            : "0 1px 4px rgba(0,0,0,0.08)",
+          marginBottom: "10px",
+          transition: "box-shadow 0.16s ease",
+        }}
+      >
+        <img
+          src={release.cover}
+          alt={release.title}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "#111",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {release.title}
+      </div>
+
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#666",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {release.artist}
+      </div>
+
+      {release.source === "unreleased" && (
+        <div
+          style={{
+            marginTop: "6px",
+            fontSize: "11px",
+            color: "#8a8a8a",
+          }}
+        >
+          Session Import
+        </div>
+      )}
+    </button>
+  );
+});
+
 export function MusicTitleBar({
   activeTrack = null,
   isPlaying = false,
@@ -131,7 +221,7 @@ export function MusicTitleBar({
           onClick={onPrev}
           style={buttonStyle}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <svg width="36" height="36" viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <rect x="3" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
             <path d="M13.5 4.8L7.2 9L13.5 13.2V4.8Z" fill="currentColor" />
           </svg>
@@ -143,12 +233,12 @@ export function MusicTitleBar({
           style={buttonStyle}
         >
           {isPlaying ? (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <rect x="4.2" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
               <rect x="10.8" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
             </svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="M6 4.4L13.4 9L6 13.6V4.4Z" fill="currentColor" />
             </svg>
           )}
@@ -159,7 +249,7 @@ export function MusicTitleBar({
           onClick={onNext}
           style={buttonStyle}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <rect x="12.6" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
             <path d="M4.5 4.8L10.8 9L4.5 13.2V4.8Z" fill="currentColor" />
           </svg>
@@ -191,10 +281,16 @@ export function MusicTitleBar({
             value={volume}
             onChange={(e) => onVolumeChange?.(Number(e.target.value))}
             style={{
-              width: "98px",
-              accentColor: "#b8b8b8",
+              width: "78px",
+              height: "4px", 
+              appearance: "none",
+              background: `linear-gradient(to right, #555 ${volume}%, #dcdcdc ${volume}%)`,
+              borderRadius: "999px",
+              outline: "none",
             }}
+            
           />
+          
         </div>
       </div>
 
@@ -408,92 +504,23 @@ export function MusicApp({
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
               gap: "20px",
+              willChange: "transform",
             }}
           >
             {filteredReleases.map((release) => {
               const isSelected = selectedReleaseId === release.id;
-
+            
               return (
-                <button
+                <ReleaseCard
                   key={release.id}
+                  release={release}
+                  isSelected={isSelected}
                   onClick={() =>
                     setSelectedReleaseId((prev) =>
                       prev === release.id ? null : release.id
                     )
                   }
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: 0,
-                    textAlign: "left",
-                    cursor: "default",
-                    transform: isSelected ? "translateY(-3px)" : "translateY(0px)",
-                    transition: "transform 0.16s ease",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      backgroundColor: "#e9e9e9",
-                      boxShadow: isSelected
-                        ? "0 10px 18px rgba(0,0,0,0.18)"
-                        : "0 1px 4px rgba(0,0,0,0.08)",
-                      marginBottom: "10px",
-                      transition: "box-shadow 0.16s ease",
-                    }}
-                  >
-                    <img
-                      src={release.cover}
-                      alt={release.title}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#111",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {release.title}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {release.artist}
-                  </div>
-
-                  {release.source === "unreleased" && (
-                    <div
-                      style={{
-                        marginTop: "6px",
-                        fontSize: "11px",
-                        color: "#8a8a8a",
-                      }}
-                    >
-                      Session Import
-                    </div>
-                  )}
-                </button>
+                />
               );
             })}
           </div>
