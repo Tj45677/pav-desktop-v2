@@ -7,7 +7,9 @@ import { initialWindowState } from "@/config/windowState";
 import { desktopApps } from "@/config/apps";
 import DesktopEasterEgg from "@/components/desktop/DesktopEasterEgg";
 import { ChromeApp, ChromeTitleBar } from "@/components/apps/ChromeApp";
-
+import { MusicApp, MusicTitleBar } from "@/components/apps/MusicApp";
+import type { MusicRelease } from "@/components/apps/MusicApp";
+import { releasedTracks } from "@/components/apps/musicLibrary";
 
 
 export default function DesktopManager() {
@@ -18,6 +20,25 @@ export default function DesktopManager() {
     const [maximizingAppId, setMaximizingAppId] = useState<keyof typeof windows | null>(null);
     const maximizeAnimationCleanup = useRef<(() => void) | null>(null);
     const [chromeTab, setChromeTab] = useState<"merch" | "about">("merch");
+    const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+    const [musicView, setMusicView] = useState<"recently-added" | "albums" | "songs" | "artists">("recently-added");
+    const [musicSearch, setMusicSearch] = useState("");
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [volume, setVolume] = useState(70);
+    const [sessionTracks, setSessionTracks] = useState<MusicRelease[]>([]);
+
+    const musicLibrary = [...releasedTracks, ...sessionTracks];
+
+
+const activeTrack =
+  musicLibrary.flatMap((release) =>
+    release.tracks.map((track) => ({
+      ...track,
+      artist: release.artist,
+      cover: release.cover,
+      source: release.source,
+    }))
+  ).find((track) => track.id === activeTrackId) ?? null;
 
 const [minimizeTransforms, setMinimizeTransforms] = useState<
   Partial<Record<keyof typeof windows, string>>
@@ -93,6 +114,22 @@ const renderAppContent = (appId: keyof typeof windows) => {
   switch (appId) {
     case "chrome":
       return <ChromeApp activeTab={chromeTab} />;
+
+    case "music":
+      return (
+        <MusicApp
+          tracks={musicLibrary}
+          activeTrackId={activeTrackId}
+          activeView={musicView}
+          searchQuery={musicSearch}
+          onSelectTrack={(id) => {
+            setActiveTrackId(id);
+            setIsPlaying(true);
+          }}
+          onViewChange={setMusicView}
+        />
+      );
+
     default:
       return <div>{appId} Window</div>;
   }
@@ -548,6 +585,18 @@ return (
                       <ChromeTitleBar
                         activeTab={chromeTab}
                         onTabChange={setChromeTab}
+                      />
+                    ) : app.id === "music" ? (
+                      <MusicTitleBar
+                        activeTrack={activeTrack}
+                        isPlaying={isPlaying}
+                        volume={volume}
+                        searchQuery={musicSearch}
+                        onPrev={() => {}}
+                        onPlayPause={() => setIsPlaying((p) => !p)}
+                        onNext={() => {}}
+                        onVolumeChange={setVolume}
+                        onSearchChange={setMusicSearch}
                       />
                     ) : undefined
                   }

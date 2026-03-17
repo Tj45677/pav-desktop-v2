@@ -149,6 +149,12 @@ export function ChromeApp({
       >
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <button
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#ececec";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => window.history.back()}
             style={{
@@ -177,6 +183,12 @@ export function ChromeApp({
           </button>
 
           <button
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#ececec";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => window.history.forward()}
             style={{
@@ -206,6 +218,12 @@ export function ChromeApp({
           </button>
 
           <button
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#ececec";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => window.location.reload()}
             style={{
