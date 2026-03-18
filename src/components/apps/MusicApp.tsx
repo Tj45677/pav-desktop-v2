@@ -25,8 +25,6 @@ export type MusicRelease = {
   }[];
 };
 
-
-
 type MusicTitleBarProps = {
   activeTrack?: MusicTrack | null;
   isPlaying?: boolean;
@@ -85,23 +83,23 @@ const fallbackReleases: MusicRelease[] = [
 const ReleaseCard = memo(function ReleaseCard({
   release,
   isSelected,
-  onClick,
+  onToggle,
 }: {
   release: MusicRelease;
   isSelected: boolean;
-  onClick: () => void;
+  onToggle: (releaseId: string) => void;
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => onToggle(release.id)}
       style={{
         border: "none",
         background: "transparent",
         padding: 0,
         textAlign: "left",
         cursor: "default",
-        transform: isSelected ? "translateY(-3px)" : "translateY(0px)",
-        transition: "transform 0.16s ease",
+        transform: "none",
+        transition: "none",
       }}
     >
       <div
@@ -111,11 +109,8 @@ const ReleaseCard = memo(function ReleaseCard({
           borderRadius: "12px",
           overflow: "hidden",
           backgroundColor: "#e9e9e9",
-          boxShadow: isSelected
-            ? "0 10px 18px rgba(0,0,0,0.18)"
-            : "0 1px 4px rgba(0,0,0,0.08)",
+          boxShadow: "none",
           marginBottom: "10px",
-          transition: "box-shadow 0.16s ease",
         }}
       >
         <img
@@ -197,191 +192,249 @@ export function MusicTitleBar({
   };
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "auto 1fr auto",
-        alignItems: "center",
-        width: "100%",
-        height: "100%",
-        paddingRight: "8px",
-        gap: "14px",
-      }}
-    >
+    <>
+      <style jsx>{`
+        .music-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #d7d7d7 #f7f7f7;
+        }
+
+        .music-scroll::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+
+        .music-scroll::-webkit-scrollbar-track {
+          background: #f7f7f7;
+        }
+
+        .music-scroll::-webkit-scrollbar-thumb {
+          background: #d7d7d7;
+          border-radius: 999px;
+          border: 2px solid #f7f7f7;
+        }
+
+        .music-volume::-webkit-slider-runnable-track {
+          height: 4px;
+          background: transparent;
+          border-radius: 999px;
+        }
+
+        .music-volume::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: #f1f1f1;
+          border: 1px solid #bdbdbd;
+          box-shadow: none;
+        }
+        
+        .music-volume::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: #f1f1f1;
+          border: 1px solid #bdbdbd;
+          box-shadow: none;
+        }
+
+        .music-volume::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: #efefef;
+          border: 1px solid #bdbdbd;
+        }
+      `}</style>
+
       <div
         style={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "auto 1fr auto",
           alignItems: "center",
-          gap: "4px",
-          minWidth: "140px",
+          width: "100%",
+          height: "100%",
+          paddingRight: "8px",
+          gap: "14px",
         }}
       >
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onPrev}
-          style={buttonStyle}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            minWidth: "140px",
+          }}
         >
-          <svg width="36" height="36" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <rect x="3" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
-            <path d="M13.5 4.8L7.2 9L13.5 13.2V4.8Z" fill="currentColor" />
-          </svg>
-        </button>
-
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onPlayPause}
-          style={buttonStyle}
-        >
-          {isPlaying ? (
-            <svg width="36" height="36" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <rect x="4.2" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
-              <rect x="10.8" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onPrev}
+            style={buttonStyle}
+          >
+            <svg width="22" height="22" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="3" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
+              <path d="M13.5 4.8L7.2 9L13.5 13.2V4.8Z" fill="currentColor" />
             </svg>
+          </button>
+
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onPlayPause}
+            style={buttonStyle}
+          >
+            {isPlaying ? (
+              <svg width="24" height="24" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <rect x="4.2" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
+                <rect x="10.8" y="3.8" width="3" height="10.4" rx="1.3" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M6 4.4L13.4 9L6 13.6V4.4Z" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onNext}
+            style={buttonStyle}
+          >
+            <svg width="22" height="22" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="12.6" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
+              <path d="M4.5 4.8L10.8 9L4.5 13.2V4.8Z" fill="currentColor" />
+            </svg>
+          </button>
+
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginLeft: "6px",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3.2 6.4V9.6H5.6L8.8 12V4L5.6 6.4H3.2Z" fill="#7a7a7a" />
+              <path
+                d="M11 6.1C11.6 6.55 12 7.22 12 8C12 8.78 11.6 9.45 11 9.9"
+                stroke="#7a7a7a"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+
+            <input
+              className="music-volume"
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => onVolumeChange?.(Number(e.target.value))}
+              style={{
+                width: "78px",
+                height: "4px",
+                appearance: "none",
+                WebkitAppearance: "none",
+                background: `linear-gradient(to right, #555 ${volume}%, #dcdcdc ${volume}%)`,
+                borderRadius: "999px",
+                outline: "none",
+              }}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {activeTrack ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: "1.15",
+                minWidth: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#111",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "260px",
+                }}
+              >
+                {activeTrack.title}
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "#777",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "260px",
+                }}
+              >
+                {activeTrack.artist}
+              </span>
+            </div>
           ) : (
-            <svg width="32" height="32" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <path d="M6 4.4L13.4 9L6 13.6V4.4Z" fill="currentColor" />
-            </svg>
+            <img
+              src="/logo1.png"
+              alt="President"
+              style={{
+                height: "18px",
+                width: "auto",
+                opacity: 0.42,
+                filter: "grayscale(1)",
+              }}
+            />
           )}
-        </button>
-
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onNext}
-          style={buttonStyle}
-        >
-          <svg width="32" height="32" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <rect x="12.6" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
-            <path d="M4.5 4.8L10.8 9L4.5 13.2V4.8Z" fill="currentColor" />
-          </svg>
-        </button>
+        </div>
 
         <div
           onMouseDown={(e) => e.stopPropagation()}
           style={{
+            width: "190px",
+            height: "28px",
+            borderRadius: "999px",
+            border: "1px solid #d8d8d8",
+            backgroundColor: "#ffffff",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            marginLeft: "6px",
+            padding: "0 10px",
+            flexShrink: 0,
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M3.2 6.4V9.6H5.6L8.8 12V4L5.6 6.4H3.2Z" fill="#7a7a7a" />
-            <path
-              d="M11 6.1C11.6 6.55 12 7.22 12 8C12 8.78 11.6 9.45 11 9.9"
-              stroke="#7a7a7a"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
-
           <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => onVolumeChange?.(Number(e.target.value))}
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder="Search"
             style={{
-              width: "78px",
-              height: "4px", 
-              appearance: "none",
-              background: `linear-gradient(to right, #555 ${volume}%, #dcdcdc ${volume}%)`,
-              borderRadius: "999px",
+              width: "100%",
+              border: "none",
               outline: "none",
+              background: "transparent",
+              fontSize: "12px",
+              color: "#444",
+              fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
             }}
-            
           />
-          
         </div>
       </div>
-
-      <div
-        style={{
-          minWidth: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {activeTrack ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              lineHeight: "1.15",
-              minWidth: 0,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "12px",
-                color: "#111",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: "260px",
-              }}
-            >
-              {activeTrack.title}
-            </span>
-            <span
-              style={{
-                fontSize: "11px",
-                color: "#777",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: "260px",
-              }}
-            >
-              {activeTrack.artist}
-            </span>
-          </div>
-        ) : (
-          <img
-            src="/logo1.png"
-            alt="President"
-            style={{
-              height: "18px",
-              width: "auto",
-              opacity: 0.42,
-              filter: "grayscale(1)",
-            }}
-          />
-        )}
-      </div>
-
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          width: "190px",
-          height: "28px",
-          borderRadius: "999px",
-          border: "1px solid #d8d8d8",
-          backgroundColor: "#ffffff",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 10px",
-          flexShrink: 0,
-        }}
-      >
-        <input
-          value={searchQuery}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder="Search"
-          style={{
-            width: "100%",
-            border: "none",
-            outline: "none",
-            background: "transparent",
-            fontSize: "12px",
-            color: "#444",
-            fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
-          }}
-        />
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -395,6 +448,10 @@ export function MusicApp({
 }: MusicAppProps) {
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
 
+  const handleReleaseToggle = (releaseId: string) => {
+    setSelectedReleaseId(releaseId);
+  };
+
   const filteredReleases = tracks.filter((release) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
@@ -404,190 +461,260 @@ export function MusicApp({
     );
   });
 
+  const allSongs = tracks.flatMap((release) =>
+    release.tracks.map((track) => ({
+      ...track,
+      releaseTitle: release.title,
+      artist: release.artist,
+      cover: release.cover,
+      source: release.source,
+    }))
+  );
+
+  const filteredSongs = allSongs.filter((song) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      song.title.toLowerCase().includes(q) ||
+      song.artist.toLowerCase().includes(q) ||
+      song.releaseTitle.toLowerCase().includes(q)
+    );
+  });
+
   const selectedRelease =
-    filteredReleases.find((release) => release.id === selectedReleaseId) ?? null;
+    tracks.find((release) => release.id === selectedReleaseId) ?? null;
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
-        backgroundColor: "#f7f7f7",
-        color: "#111",
-      }}
-    >
-      <div
-        style={{
-          width: "220px",
-          borderRight: "1px solid #dbdbdb",
-          backgroundColor: "#f1f1f1",
-          padding: "18px 14px",
-          boxSizing: "border-box",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            fontSize: "12px",
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            color: "#777",
-            marginBottom: "14px",
-          }}
-        >
-          Library
-        </div>
+    <>
+      <style jsx>{`
+        .music-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #d7d7d7 #f7f7f7;
+        }
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          {[
-            { id: "recently-added", label: "Recently Added" },
-            { id: "albums", label: "Albums" },
-            { id: "songs", label: "Songs" },
-            { id: "artists", label: "Artists" },
-          ].map((item) => {
-            const isActive = activeView === item.id;
+        .music-scroll::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => onViewChange?.(item.id as MusicView)}
-                style={{
-                  border: "none",
-                  background: isActive ? "#e3e3e3" : "transparent",
-                  color: "#222",
-                  textAlign: "left",
-                  padding: "9px 10px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  cursor: "default",
-                }}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        .music-scroll::-webkit-scrollbar-track {
+          background: #f7f7f7;
+        }
+
+        .music-scroll::-webkit-scrollbar-thumb {
+          background: #d7d7d7;
+          border-radius: 999px;
+          border: 2px solid #f7f7f7;
+        }
+      `}</style>
 
       <div
         style={{
-          flex: 1,
+          height: "100%",
+          minHeight: "100%",
           display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
+          fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
+          backgroundColor: "#f7f7f7",
+          color: "#111",
         }}
       >
         <div
           style={{
-            height: "100%",
-            overflow: "auto",
-            padding: "24px",
+            width: "220px",
+            minHeight: "100%",
+            borderRight: "1px solid #dbdbdb",
+            backgroundColor: "#f1f1f1",
+            padding: "18px 14px",
             boxSizing: "border-box",
+            flexShrink: 0,
           }}
         >
           <div
             style={{
-              fontSize: "24px",
-              fontWeight: 600,
-              marginBottom: "18px",
+              fontSize: "12px",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "#777",
+              marginBottom: "14px",
             }}
           >
-            {activeView === "recently-added" && "Recently Added"}
-            {activeView === "albums" && "Albums"}
-            {activeView === "songs" && "Songs"}
-            {activeView === "artists" && "Artists"}
+            Library
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-              gap: "20px",
-              willChange: "transform",
-            }}
-          >
-            {filteredReleases.map((release) => {
-              const isSelected = selectedReleaseId === release.id;
-            
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {[
+              { id: "recently-added", label: "Recently Added" },
+              { id: "albums", label: "Albums" },
+              { id: "songs", label: "Songs" },
+              { id: "artists", label: "Artists" },
+            ].map((item) => {
+              const isActive = activeView === item.id;
+
               return (
-                <ReleaseCard
-                  key={release.id}
-                  release={release}
-                  isSelected={isSelected}
-                  onClick={() =>
-                    setSelectedReleaseId((prev) =>
-                      prev === release.id ? null : release.id
-                    )
-                  }
-                />
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedReleaseId(null);
+                    onViewChange?.(item.id as MusicView);
+                  }}
+                  style={{
+                    border: "none",
+                    background: isActive ? "#e3e3e3" : "transparent",
+                    color: "#222",
+                    textAlign: "left",
+                    padding: "9px 10px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    cursor: "default",
+                  }}
+                >
+                  {item.label}
+                </button>
               );
             })}
           </div>
+        </div>
 
-          {selectedRelease && (
-            <div
-              style={{
-                marginTop: "28px",
-                borderTop: "1px solid #d9d9d9",
-                paddingTop: "28px",
-                display: "grid",
-                gridTemplateColumns: "320px 1fr",
-                gap: "32px",
-                alignItems: "start",
-              }}
-            >
+        <div
+          className="music-scroll"
+          style={{
+            flex: 1,
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+            overflow: "auto",
+            backgroundColor: "#f7f7f7",
+          }}
+        >
+          <div
+            style={{
+              padding: "24px",
+              boxSizing: "border-box",
+            }}
+          >
+            {!selectedReleaseId &&
+              (activeView === "recently-added" || activeView === "albums") && (
+                <>
+                  <div
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 600,
+                      marginBottom: "18px",
+                    }}
+                  >
+                    {activeView === "recently-added" ? "Recently Added" : "Albums"}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                      gap: "20px",
+                    }}
+                  >
+                    {filteredReleases.map((release) => {
+                      const isSelected = selectedReleaseId === release.id;
+
+                      return (
+                        <ReleaseCard
+                          key={release.id}
+                          release={release}
+                          isSelected={isSelected}
+                          onToggle={handleReleaseToggle}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+            {selectedRelease && (
               <div>
-                <div
+                <button
+                  onClick={() => setSelectedReleaseId(null)}
                   style={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    borderRadius: "14px",
-                    overflow: "hidden",
-                    backgroundColor: "#e9e9e9",
-                    boxShadow: "0 8px 18px rgba(0,0,0,0.14)",
+                    border: "none",
+                    background: "transparent",
+                    padding: "0 0 18px 0",
+                    fontSize: "14px",
+                    color: "#444",
+                    cursor: "default",
                   }}
                 >
-                  <img
-                    src={selectedRelease.cover}
-                    alt={selectedRelease.title}
+                  ← Back
+                </button>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "260px 1fr",
+                    gap: "28px",
+                    alignItems: "start",
+                    marginBottom: "28px",
+                  }}
+                >
+                  <div
                     style={{
                       width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
+                      aspectRatio: "1 / 1",
+                      borderRadius: "14px",
+                      overflow: "hidden",
+                      backgroundColor: "#e9e9e9",
+                      boxShadow: "none",
                     }}
-                  />
-                </div>
-              </div>
+                  >
+                    <img
+                      src={selectedRelease.cover}
+                      alt={selectedRelease.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  </div>
 
-              <div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "#111",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {selectedRelease.title}
-                </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        color: "#666",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Album
+                    </div>
 
-                <div
-                  style={{
-                    fontSize: "14px",
-                    color: "#4f4f4f",
-                    marginBottom: "18px",
-                  }}
-                >
-                  {selectedRelease.artist}
+                    <div
+                      style={{
+                        fontSize: "42px",
+                        fontWeight: 700,
+                        lineHeight: "1",
+                        marginBottom: "12px",
+                        color: "#111",
+                      }}
+                    >
+                      {selectedRelease.title}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#555",
+                        marginBottom: "24px",
+                      }}
+                    >
+                      {selectedRelease.artist} • {selectedRelease.tracks.length} songs
+                    </div>
+                  </div>
                 </div>
 
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "0px",
                     borderTop: "1px solid #e2e2e2",
                   }}
                 >
@@ -597,13 +724,13 @@ export function MusicApp({
                       onClick={() => onSelectTrack?.(track.id)}
                       style={{
                         border: "none",
-                        background: "transparent",
+                        background: activeTrackId === track.id ? "#ececec" : "transparent",
                         borderBottom: "1px solid #e2e2e2",
                         padding: "12px 10px",
                         textAlign: "left",
                         cursor: "default",
                         display: "grid",
-                        gridTemplateColumns: "32px 1fr",
+                        gridTemplateColumns: "40px 1fr",
                         alignItems: "center",
                         fontSize: "13px",
                         color: "#222",
@@ -615,10 +742,142 @@ export function MusicApp({
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {!selectedReleaseId && activeView === "songs" && (
+              <>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: 600,
+                    marginBottom: "18px",
+                  }}
+                >
+                  Songs
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "50px 1fr 1fr",
+                    borderTop: "1px solid #e2e2e2",
+                  }}
+                >
+                  <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>#</div>
+                  <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>Title</div>
+                  <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>Release</div>
+
+                  {filteredSongs.map((song, index) => (
+                    <div
+                      key={song.id}
+                      style={{
+                        display: "contents",
+                      }}
+                    >
+                      <button
+                        onClick={() => onSelectTrack?.(song.id)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          borderTop: "1px solid #f0f0f0",
+                          padding: "12px 10px",
+                          textAlign: "left",
+                          fontSize: "13px",
+                          color: "#666",
+                          cursor: "default",
+                        }}
+                      >
+                        {index + 1}
+                      </button>
+                      <button
+                        onClick={() => onSelectTrack?.(song.id)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          borderTop: "1px solid #f0f0f0",
+                          padding: "12px 10px",
+                          textAlign: "left",
+                          fontSize: "13px",
+                          color: "#222",
+                          cursor: "default",
+                        }}
+                      >
+                        {song.title}
+                      </button>
+                      <button
+                        onClick={() => onSelectTrack?.(song.id)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          borderTop: "1px solid #f0f0f0",
+                          padding: "12px 10px",
+                          textAlign: "left",
+                          fontSize: "13px",
+                          color: "#666",
+                          cursor: "default",
+                        }}
+                      >
+                        {song.releaseTitle}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {!selectedReleaseId && activeView === "artists" && (
+              <>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: 600,
+                    marginBottom: "18px",
+                  }}
+                >
+                  Artists
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "10px 0",
+                    }}
+                  >
+                    <img
+                      src="/logo1.png"
+                      alt="President"
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "999px",
+                        objectFit: "cover",
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#111",
+                        fontWeight: 500,
+                      }}
+                    >
+                      President
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
