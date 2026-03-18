@@ -10,7 +10,7 @@ import { ChromeApp, ChromeTitleBar } from "@/components/apps/ChromeApp";
 import { MusicApp, MusicTitleBar } from "@/components/apps/MusicApp";
 import type { MusicRelease, MusicTrack } from "@/components/apps/MusicApp";
 import { releasedTracks } from "@/components/apps/musicLibrary";
-
+import { TerminalApp, TerminalTitleBar } from "@/components/apps/TerminalApp";
 
 export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
@@ -141,6 +141,9 @@ const renderAppContent = (appId: keyof typeof windows) => {
         />
       );
 
+      case "terminal":
+  return <TerminalApp />;
+  
     default:
       return <div>{appId} Window</div>;
   }
@@ -672,23 +675,25 @@ return (
                       />
                     ) : app.id === "music" ? (
                       <MusicTitleBar
-                            activeTrack={activeTrack}
-                            isPlaying={isPlaying}
-                            volume={volume}
-                            searchQuery={musicSearch}
-                            onPlayPause={() => {
-                              if (!activeTrack) return;
-                              setIsPlaying((prev) => !prev);
-                            }}
-                            onSearchChange={setMusicSearch}
-                            onVolumeChange={setVolume}
-                            currentTime={currentTime}
-                            durationSeconds={duration}
-                            onSeek={handleSeek}
-                          />
-                        ) : undefined
-                      }
-                  windowBackground="#ffffff"
+                        activeTrack={activeTrack}
+                        isPlaying={isPlaying}
+                        volume={volume}
+                        searchQuery={musicSearch}
+                        currentTime={currentTime}
+                        durationSeconds={duration}
+                        onPlayPause={() => {
+                          if (!activeTrack) return;
+                          setIsPlaying((prev) => !prev);
+                        }}
+                        onSearchChange={setMusicSearch}
+                        onVolumeChange={setVolume}
+                        onSeek={handleSeek}
+                      />
+                    ) : app.id === "terminal" ? (
+                      <TerminalTitleBar />
+                    ) : undefined
+                  }
+                  windowBackground={app.id === "terminal" ? "#012456" : "#ffffff"}
                   onTitleBarMouseDown={(event) => startDrag(event, app.id)}
                   onTitleBarDoubleClick={() => maximizeApp(app.id)}
                   onMinimize={() => minimizeApp(app.id)}
