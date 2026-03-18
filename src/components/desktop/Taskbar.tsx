@@ -13,7 +13,12 @@ type TaskbarProps = {
 };
 
 export default function Taskbar({ openApp, windows, iconRefs }: TaskbarProps) {
-    const taskbarApps = desktopApps.filter((app) => app.showInTaskbar);
+    const taskbarApps = desktopApps.filter((app) => {
+      if (app.id === "terminal") {
+        return windows.terminal.isOpen;
+      }
+      return app.showInTaskbar;
+    });
     const [isStartHovered, setIsStartHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);

@@ -11,6 +11,8 @@ import { MusicApp, MusicTitleBar } from "@/components/apps/MusicApp";
 import type { MusicRelease, MusicTrack } from "@/components/apps/MusicApp";
 import { releasedTracks } from "@/components/apps/musicLibrary";
 import { TerminalApp, TerminalTitleBar } from "@/components/apps/TerminalApp";
+import { usePathname } from "next/navigation";
+import { getStartupConfig } from "@/config/routeConfig";
 
 export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
@@ -30,6 +32,8 @@ export default function DesktopManager() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const pathname = usePathname();
+    const startup = getStartupConfig(pathname);
 
     const musicLibrary = [...releasedTracks, ...sessionTracks];
 
@@ -221,6 +225,47 @@ const handleSeek = (time: number) => {
   setCurrentTime(time);
 };
 
+
+useEffect(() => {
+  if (!startup) return;
+
+  setWindows((prev) => {
+    const updated = { ...prev };
+
+    const highestZ = Math.max(
+      0,
+      ...Object.values(updated).map((w) => w.zIndex ?? 0)
+    );
+
+    let z = highestZ + 1;
+
+
+    startup.openApps.forEach((appId) => {
+      if (!updated[appId]) return;
+
+      updated[appId] = {
+        ...updated[appId],
+        isOpen: true,
+        isMinimized: false,
+        isFocused: false,
+        zIndex: z++,
+      };
+    });
+
+
+    if (startup.focusedApp && updated[startup.focusedApp]) {
+      updated[startup.focusedApp].isFocused = true;
+    }
+
+    return updated;
+  });
+
+
+  if (startup.chromeTab) {
+    setChromeTab(startup.chromeTab);
+  }
+
+}, []); 
 
                                                                                         //openapp
                                                                                     
