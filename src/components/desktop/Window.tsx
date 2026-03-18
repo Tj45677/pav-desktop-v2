@@ -13,8 +13,8 @@ type WindowProps = {
   titleBarBackground?: string;
   windowBackground?: string;
   titleBarContent?: React.ReactNode;
-  onMinimize?: () => void;  
-  onMaximize?: () => void;  
+  onMinimize?: () => void;
+  onMaximize?: () => void;
   onClose?: () => void;
   onTitleBarMouseDown?: (event: React.MouseEvent<HTMLDivElement>) => void;
   onTitleBarDoubleClick?: () => void;
@@ -79,10 +79,9 @@ export default function Window({
   onTitleBarDoubleClick,
   children,
 }: WindowProps) {
-
-    const [isMinHovered, setIsMinHovered] = useState(false);
-    const [isMaxHovered, setIsMaxHovered] = useState(false);
-    const [isCloseHovered, setIsCloseHovered] = useState(false);
+  const [isMinHovered, setIsMinHovered] = useState(false);
+  const [isMaxHovered, setIsMaxHovered] = useState(false);
+  const [isCloseHovered, setIsCloseHovered] = useState(false);
 
   return (
     <div
@@ -90,6 +89,8 @@ export default function Window({
         width: "100%",
         height: "100%",
         maxWidth: "none",
+        display: "flex",
+        flexDirection: "column",
         color: "black",
         border: isFocused ? "1px solid #cfcfcf" : "1px solid #888",
         boxShadow: isFocused
@@ -110,55 +111,57 @@ export default function Window({
         transformOrigin: "center center",
       }}
     >
-      <div
-        onMouseDown={onTitleBarMouseDown}
-        onDoubleClick={onTitleBarDoubleClick}
-        style={{
-          height: "42px",
-          backgroundColor: titleBarBackground,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 0 0 12px",
-          gap: "8px",
-          fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
-          fontSize: "13px",
-        }}
-    >
+      {!hideTitleBar && (
         <div
+          onMouseDown={onTitleBarMouseDown}
+          onDoubleClick={onTitleBarDoubleClick}
           style={{
+            height: "42px",
+            flexShrink: 0,
+            backgroundColor: titleBarBackground,
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 0 0 12px",
             gap: "8px",
-            flex: 1,
-            minWidth: 0,
+            fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
+            fontSize: "13px",
           }}
         >
-          {titleBarContent ?? (
-            <>
-              <img
-                src={icon}
-                alt={title}
-                style={{ width: "16px", height: "16px" }}
-              />
-              <span>{title}</span>
-            </>
-          )}
-        </div>
-              <div
+          <div
             style={{
-                display: "flex",
-                alignItems: "center"
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flex: 1,
+              minWidth: 0,
             }}
-            >
+          >
+            {titleBarContent ?? (
+              <>
+                <img
+                  src={icon}
+                  alt={title}
+                  style={{ width: "16px", height: "16px" }}
+                />
+                <span>{title}</span>
+              </>
+            )}
+          </div>
 
-            
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+          >
             <button
-                onMouseDown={(event) => event.stopPropagation()}
-                onClick={onMinimize}
-                onMouseEnter={() => setIsMinHovered(true)}
-                onMouseLeave={() => setIsMinHovered(false)}
-                style={{
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={onMinimize}
+              onMouseEnter={() => setIsMinHovered(true)}
+              onMouseLeave={() => setIsMinHovered(false)}
+              style={{
                 width: "40px",
                 height: "40px",
                 border: "none",
@@ -166,78 +169,76 @@ export default function Window({
                 color: "black",
                 fontSize: "16px",
                 cursor: "default",
-                borderRadius: "null",
-                top: "-3px",
+                borderRadius: "0px",
                 position: "relative",
+                top: "-3px",
                 transition: "background 0.15s ease, color 0.15s ease",
-            }}
-            aria-label={`Minimize ${title}`}
-          >
-            —
-          </button>
+              }}
+              aria-label={`Minimize ${title}`}
+            >
+              —
+            </button>
 
+            <button
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={onMaximize}
+              onMouseEnter={() => setIsMaxHovered(true)}
+              onMouseLeave={() => setIsMaxHovered(false)}
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "none",
+                background: isMaxHovered ? "#e5e5e5" : "transparent",
+                color: "black",
+                fontSize: "17px",
+                cursor: "default",
+                borderRadius: "0px",
+                transition: "background 0.15s ease, color 0.15s ease",
+              }}
+              aria-label={`Maximize ${title}`}
+            >
+              {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+            </button>
 
-
-          <button
-            onMouseDown={(event) => event.stopPropagation()}
-            onClick={onMaximize}
-            onMouseEnter={() => setIsMaxHovered(true)}
-            onMouseLeave={() => setIsMaxHovered(false)}
-            style={{
-              width: "40px",
-              height: "40px",
-              border: "none",
-              background: isMaxHovered ? "#e5e5e5" : "transparent",
-              color: "black",
-              fontSize: "17px",
-              cursor: "default",
-              borderRadius: "0px",
-              transition: "background 0.15s ease, color 0.15s ease",
-            }}
-            aria-label={`Maximize ${title}`}
-          >
-            {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-          </button>
-
-
-
-          <button
-            onMouseDown={(event) => event.stopPropagation()}
-            onClick={onClose}
-            onMouseEnter={() => setIsCloseHovered(true)}
-            onMouseLeave={() => setIsCloseHovered(false)}
-            style={{
-              width: "40px",
-              height: "40px",
-              border: "none",
-              background: isCloseHovered ? "#e81123" : "transparent",
-              color: isCloseHovered ? "white" : "black",
-              fontSize: "16px",
-              cursor: "default",
-              borderRadius: "0px",
-              position: "relative",
-              top: "-3px",
-              transition: "background 0.15s ease, color 0.15s ease",
-              
-            }}
-            aria-label={`Close ${title}`}
-          >
-            ✕
-          </button>
+            <button
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={onClose}
+              onMouseEnter={() => setIsCloseHovered(true)}
+              onMouseLeave={() => setIsCloseHovered(false)}
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "none",
+                background: isCloseHovered ? "#e81123" : "transparent",
+                color: isCloseHovered ? "white" : "black",
+                fontSize: "16px",
+                cursor: "default",
+                borderRadius: "0px",
+                position: "relative",
+                top: "-3px",
+                transition: "background 0.15s ease, color 0.15s ease",
+              }}
+              aria-label={`Close ${title}`}
+            >
+              ✕
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         style={{
+          flex: 1,
+          minHeight: 0,
           padding: "0px",
           fontFamily: '"Segoe UI Variable", "Segoe UI", Arial, sans-serif',
           fontSize: "16px",
           backgroundColor: windowBackground,
+          overflow: "hidden",
         }}
       >
         {children}
       </div>
     </div>
-
   );
 }

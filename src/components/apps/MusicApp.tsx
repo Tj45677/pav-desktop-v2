@@ -7,6 +7,7 @@ export type MusicView = "recently-added" | "albums" | "songs" | "artists";
 export type MusicTrack = {
   id: string;
   title: string;
+  duration?: string;
   artist: string;
   cover: string;
   audioSrc?: string;
@@ -22,6 +23,8 @@ export type MusicRelease = {
   tracks: {
     id: string;
     title: string;
+    duration?: string;
+    audioSrc?: string; 
   }[];
 };
 
@@ -30,11 +33,14 @@ type MusicTitleBarProps = {
   isPlaying?: boolean;
   volume?: number;
   searchQuery?: string;
+  currentTime?: number;
+  durationSeconds?: number;
   onPrev?: () => void;
   onPlayPause?: () => void;
   onNext?: () => void;
   onVolumeChange?: (value: number) => void;
   onSearchChange?: (value: string) => void;
+  onSeek?: (time: number) => void;
 };
 
 type MusicAppProps = {
@@ -51,7 +57,7 @@ const fallbackReleases: MusicRelease[] = [
     id: "release-1",
     title: "Release One",
     artist: "President",
-    cover: "/logo1.png",
+    cover: "/inauguration_cover.png",
     source: "released",
     tracks: [
       { id: "release-1-track-1", title: "Track One" },
@@ -62,7 +68,7 @@ const fallbackReleases: MusicRelease[] = [
     id: "release-2",
     title: "Release Two",
     artist: "President",
-    cover: "/logo1.png",
+    cover: "/inauguration_cover.png",
     source: "released",
     tracks: [{ id: "release-2-track-1", title: "Track One" }],
   },
@@ -70,7 +76,7 @@ const fallbackReleases: MusicRelease[] = [
     id: "release-3",
     title: "Release Three",
     artist: "President",
-    cover: "/logo1.png",
+    cover: "/inauguration_cover.png",
     source: "released",
     tracks: [
       { id: "release-3-track-1", title: "Track One" },
@@ -89,17 +95,34 @@ const ReleaseCard = memo(function ReleaseCard({
   isSelected: boolean;
   onToggle: (releaseId: string) => void;
 }) {
+  const raisedShadow = "0 8px 18px rgba(0,0,0,0.14)";
+  const baseShadow = "0 1px 3px rgba(0,0,0,0.06)";
+
   return (
     <button
       onClick={() => onToggle(release.id)}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.transform = "translateY(-3px)";
+          const cover = e.currentTarget.firstElementChild as HTMLDivElement | null;
+          if (cover) cover.style.boxShadow = raisedShadow;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.transform = "translateY(0px)";
+          const cover = e.currentTarget.firstElementChild as HTMLDivElement | null;
+          if (cover) cover.style.boxShadow = baseShadow;
+        }
+      }}
       style={{
         border: "none",
         background: "transparent",
         padding: 0,
         textAlign: "left",
         cursor: "default",
-        transform: "none",
-        transition: "none",
+        transform: isSelected ? "translateY(-3px)" : "translateY(0px)",
+        transition: "transform 0.14s ease",
       }}
     >
       <div
@@ -109,13 +132,16 @@ const ReleaseCard = memo(function ReleaseCard({
           borderRadius: "12px",
           overflow: "hidden",
           backgroundColor: "#e9e9e9",
-          boxShadow: "none",
+          boxShadow: isSelected ? raisedShadow : baseShadow,
           marginBottom: "10px",
+          transition: "box-shadow 0.14s ease",
         }}
       >
         <img
           src={release.cover}
           alt={release.title}
+          loading="lazy"
+          decoding="async"
           style={{
             width: "100%",
             height: "100%",
@@ -165,16 +191,97 @@ const ReleaseCard = memo(function ReleaseCard({
   );
 });
 
+function VolumeSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const updateFromClientX = (clientX: number, element: HTMLDivElement) => {
+    const rect = element.getBoundingClientRect();
+    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+    onChange(Math.round(ratio * 100));
+  };
+
+  return (
+    <div
+      onMouseDown={(e) => {
+        e.preventDefault();
+        const element = e.currentTarget;
+        updateFromClientX(e.clientX, element);
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+          updateFromClientX(moveEvent.clientX, element);
+        };
+
+        const handleMouseUp = () => {
+          window.removeEventListener("mousemove", handleMouseMove);
+          window.removeEventListener("mouseup", handleMouseUp);
+        };
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+      }}
+      style={{
+        position: "relative",
+        width: "78px",
+        height: "12px",
+        display: "flex",
+        alignItems: "center",
+        cursor: "default",
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          height: "4px",
+          borderRadius: "999px",
+          background: "#dcdcdc",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          width: `${value}%`,
+          height: "4px",
+          borderRadius: "999px",
+          background: "#555",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: `calc(${value}% - 6px)`,
+          width: "18px",
+          height: "12px",
+          borderRadius: "4px",
+          background: "#f5f5f5",
+          border: "1px solid #bcbcbc",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+        }}
+      />
+    </div>
+  );
+}
+
 export function MusicTitleBar({
   activeTrack = null,
   isPlaying = false,
   volume = 70,
   searchQuery = "",
+  currentTime = 0,
+  durationSeconds = 0,
   onPrev,
   onPlayPause,
   onNext,
   onVolumeChange,
   onSearchChange,
+  onSeek,
 }: MusicTitleBarProps) {
   const buttonStyle: React.CSSProperties = {
     width: "30px",
@@ -189,67 +296,21 @@ export function MusicTitleBar({
     padding: 0,
     cursor: "default",
     flexShrink: 0,
+    
   };
+
+const formatTime = (time: number) => {
+  if (!Number.isFinite(time)) return "0:00";
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${seconds}`;
+};
 
   return (
     <>
-      <style jsx>{`
-        .music-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: #d7d7d7 #f7f7f7;
-        }
-
-        .music-scroll::-webkit-scrollbar {
-          width: 10px;
-          height: 10px;
-        }
-
-        .music-scroll::-webkit-scrollbar-track {
-          background: #f7f7f7;
-        }
-
-        .music-scroll::-webkit-scrollbar-thumb {
-          background: #d7d7d7;
-          border-radius: 999px;
-          border: 2px solid #f7f7f7;
-        }
-
-        .music-volume::-webkit-slider-runnable-track {
-          height: 4px;
-          background: transparent;
-          border-radius: 999px;
-        }
-
-        .music-volume::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 12px;
-          height: 12px;
-          border-radius: 999px;
-          background: #f1f1f1;
-          border: 1px solid #bdbdbd;
-          box-shadow: none;
-        }
-        
-        .music-volume::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          border-radius: 999px;
-          background: #f1f1f1;
-          border: 1px solid #bdbdbd;
-          box-shadow: none;
-        }
-
-        .music-volume::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          border-radius: 999px;
-          background: #efefef;
-          border: 1px solid #bdbdbd;
-        }
-      `}</style>
-
-      <div
+    <div
         style={{
           display: "grid",
           gridTemplateColumns: "auto 1fr auto",
@@ -273,7 +334,7 @@ export function MusicTitleBar({
             onClick={onPrev}
             style={buttonStyle}
           >
-            <svg width="22" height="22" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <rect x="3" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
               <path d="M13.5 4.8L7.2 9L13.5 13.2V4.8Z" fill="currentColor" />
             </svg>
@@ -301,7 +362,7 @@ export function MusicTitleBar({
             onClick={onNext}
             style={buttonStyle}
           >
-            <svg width="22" height="22" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <rect x="12.6" y="4" width="2.4" height="10" rx="1.2" fill="currentColor" />
               <path d="M4.5 4.8L10.8 9L4.5 13.2V4.8Z" fill="currentColor" />
             </svg>
@@ -326,23 +387,7 @@ export function MusicTitleBar({
               />
             </svg>
 
-            <input
-              className="music-volume"
-              type="range"
-              min="0"
-              max="100"
-              value={volume}
-              onChange={(e) => onVolumeChange?.(Number(e.target.value))}
-              style={{
-                width: "78px",
-                height: "4px",
-                appearance: "none",
-                WebkitAppearance: "none",
-                background: `linear-gradient(to right, #555 ${volume}%, #dcdcdc ${volume}%)`,
-                borderRadius: "999px",
-                outline: "none",
-              }}
-            />
+            <VolumeSlider value={volume} onChange={(value) => onVolumeChange?.(value)} />
           </div>
         </div>
 
@@ -357,12 +402,13 @@ export function MusicTitleBar({
           {activeTrack ? (
             <div
               style={{
+                width: "360px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                lineHeight: "1.15",
                 minWidth: 0,
+                paddingTop: "2px",
               }}
             >
               <span
@@ -372,11 +418,13 @@ export function MusicTitleBar({
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: "260px",
+                  maxWidth: "320px",
+                  lineHeight: "1.1",
                 }}
               >
                 {activeTrack.title}
               </span>
+        
               <span
                 style={{
                   fontSize: "11px",
@@ -384,11 +432,124 @@ export function MusicTitleBar({
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: "260px",
+                  maxWidth: "320px",
+                  lineHeight: "1.1",
+                  marginTop: "2px",
+                  marginBottom: "4px",
                 }}
               >
                 {activeTrack.artist}
               </span>
+        
+              <div
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                  width: "100%",
+                  display: "grid",
+                  gridTemplateColumns: "34px 1fr 34px",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "#777",
+                    textAlign: "right",
+                  }}
+                >
+                  {formatTime(currentTime)}
+                </span>
+        
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+        
+                    const element = e.currentTarget;
+                    const rect = element.getBoundingClientRect();
+        
+                    const updateSeek = (clientX: number) => {
+                      const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+                      if (durationSeconds && onSeek) {
+                        onSeek(ratio * durationSeconds);
+                      }
+                    };
+        
+                    updateSeek(e.clientX);
+        
+                    const handleMouseMove = (moveEvent: MouseEvent) => {
+                      updateSeek(moveEvent.clientX);
+                    };
+        
+                    const handleMouseUp = () => {
+                      window.removeEventListener("mousemove", handleMouseMove);
+                      window.removeEventListener("mouseup", handleMouseUp);
+                    };
+        
+                    window.addEventListener("mousemove", handleMouseMove);
+                    window.addEventListener("mouseup", handleMouseUp);
+                  }}
+                  style={{
+                    position: "relative",
+                    height: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "default",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      height: "4px",
+                      borderRadius: "999px",
+                      background: "#d7d7d7",
+                    }}
+                  />
+        
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      width:
+                        durationSeconds > 0
+                          ? `${Math.min((currentTime / durationSeconds) * 100, 100)}%`
+                          : "0%",
+                      height: "4px",
+                      borderRadius: "999px",
+                      background: "#7c7c7c",
+                    }}
+                  />
+        
+                  <div
+                    style={{
+                      position: "absolute",
+                      left:
+                        durationSeconds > 0
+                          ? `calc(${Math.min((currentTime / durationSeconds) * 100, 100)}% - 5px)`
+                          : "-5px",
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "999px",
+                      background: "#f5f5f5",
+                      border: "1px solid #bcbcbc",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.18)",
+                    }}
+                  />
+                </div>
+        
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "#777",
+                    textAlign: "left",
+                  }}
+                >
+                  {formatTime(durationSeconds)}
+                </span>
+              </div>
             </div>
           ) : (
             <img
@@ -462,14 +623,16 @@ export function MusicApp({
   });
 
   const allSongs = tracks.flatMap((release) =>
-    release.tracks.map((track) => ({
-      ...track,
-      releaseTitle: release.title,
-      artist: release.artist,
-      cover: release.cover,
-      source: release.source,
-    }))
-  );
+  release.tracks.map((track) => ({
+    id: track.id,
+    title: track.title,
+    duration: track.duration,
+    releaseTitle: release.title,
+    artist: release.artist,
+    cover: release.cover,
+    source: release.source,
+  }))
+);
 
   const filteredSongs = allSongs.filter((song) => {
     const q = searchQuery.trim().toLowerCase();
@@ -638,11 +801,23 @@ export function MusicApp({
                     background: "transparent",
                     padding: "0 0 18px 0",
                     fontSize: "14px",
-                    color: "#444",
+                    color: "#5f5f5f",
                     cursor: "default",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
                   }}
                 >
-                  ← Back
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M9.5 3.5L5.5 8L9.5 12.5"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>Back</span>
                 </button>
 
                 <div
@@ -667,6 +842,8 @@ export function MusicApp({
                     <img
                       src={selectedRelease.cover}
                       alt={selectedRelease.title}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: "100%",
                         height: "100%",
@@ -730,7 +907,7 @@ export function MusicApp({
                         textAlign: "left",
                         cursor: "default",
                         display: "grid",
-                        gridTemplateColumns: "40px 1fr",
+                        gridTemplateColumns: "40px 1fr 70px",
                         alignItems: "center",
                         fontSize: "13px",
                         color: "#222",
@@ -738,6 +915,14 @@ export function MusicApp({
                     >
                       <span style={{ color: "#666" }}>{index + 1}</span>
                       <span>{track.title}</span>
+                      <span
+                        style={{
+                          color: "#666",
+                          textAlign: "right",
+                        }}
+                      >
+                        {track.duration ?? "—"}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -759,13 +944,14 @@ export function MusicApp({
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "50px 1fr 1fr",
+                    gridTemplateColumns: "50px 1fr 1fr 80px",
                     borderTop: "1px solid #e2e2e2",
                   }}
                 >
                   <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>#</div>
                   <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>Title</div>
                   <div style={{ padding: "10px", fontSize: "12px", color: "#666" }}>Release</div>
+                  <div>Duration</div>
 
                   {filteredSongs.map((song, index) => (
                     <div
@@ -818,6 +1004,20 @@ export function MusicApp({
                         }}
                       >
                         {song.releaseTitle}
+                      </button>
+                      <button
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          borderTop: "1px solid #f0f0f0",
+                          padding: "12px 10px",
+                          textAlign: "right",
+                          fontSize: "13px",
+                          color: "#666",
+                          cursor: "default",
+                        }}
+                      >
+                        {song.duration ?? "—"}
                       </button>
                     </div>
                   ))}

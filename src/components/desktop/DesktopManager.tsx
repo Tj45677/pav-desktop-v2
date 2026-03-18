@@ -8,7 +8,7 @@ import { desktopApps } from "@/config/apps";
 import DesktopEasterEgg from "@/components/desktop/DesktopEasterEgg";
 import { ChromeApp, ChromeTitleBar } from "@/components/apps/ChromeApp";
 import { MusicApp, MusicTitleBar } from "@/components/apps/MusicApp";
-import type { MusicRelease } from "@/components/apps/MusicApp";
+import type { MusicRelease, MusicTrack } from "@/components/apps/MusicApp";
 import { releasedTracks } from "@/components/apps/musicLibrary";
 
 
@@ -26,19 +26,13 @@ export default function DesktopManager() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState(70);
     const [sessionTracks, setSessionTracks] = useState<MusicRelease[]>([]);
+    const [activeTrack, setActiveTrack] = useState<MusicTrack | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
 
     const musicLibrary = [...releasedTracks, ...sessionTracks];
 
-
-const activeTrack =
-  musicLibrary.flatMap((release) =>
-    release.tracks.map((track) => ({
-      ...track,
-      artist: release.artist,
-      cover: release.cover,
-      source: release.source,
-    }))
-  ).find((track) => track.id === activeTrackId) ?? null;
 
 const [minimizeTransforms, setMinimizeTransforms] = useState<
   Partial<Record<keyof typeof windows, string>>
@@ -123,8 +117,25 @@ const renderAppContent = (appId: keyof typeof windows) => {
           activeView={musicView}
           searchQuery={musicSearch}
           onSelectTrack={(id) => {
-            setActiveTrackId(id);
-            setIsPlaying(true);
+            const foundTrack = musicLibrary
+              .flatMap((release) =>
+                release.tracks.map((track) => ({
+                  id: track.id,
+                  title: track.title,
+                  duration: track.duration,
+                  audioSrc: track.audioSrc,
+                  artist: release.artist,
+                  cover: release.cover,
+                  source: release.source,
+                }))
+              )
+              .find((track) => track.id === id);
+          
+            if (foundTrack) {
+              setActiveTrack(foundTrack);
+              setActiveTrackId(foundTrack.id);
+              setIsPlaying(true);
+            }
           }}
           onViewChange={setMusicView}
         />
@@ -134,6 +145,79 @@ const renderAppContent = (appId: keyof typeof windows) => {
       return <div>{appId} Window</div>;
   }
 };
+
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  if (activeTrack?.audioSrc) {
+    audio.pause();
+    audio.src = activeTrack.audioSrc;
+    audio.load();
+  } else {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    setCurrentTime(0);
+    setDuration(0);
+  }
+}, [activeTrack]);
+
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  if (isPlaying && activeTrack?.audioSrc) {
+    audio.play().catch((error) => {
+      console.error("Audio play failed:", error, activeTrack.audioSrc);
+    });
+  } else {
+    audio.pause();
+  }
+}, [isPlaying, activeTrack]);
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  audio.volume = volume / 100;
+}, [volume]);
+
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  const handleTimeUpdate = () => {
+    setCurrentTime(audio.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    setDuration(audio.duration || 0);
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  audio.addEventListener("timeupdate", handleTimeUpdate);
+  audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+  audio.addEventListener("ended", handleEnded);
+
+  return () => {
+    audio.removeEventListener("timeupdate", handleTimeUpdate);
+    audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.removeEventListener("ended", handleEnded);
+  };
+}, []);
+
+const handleSeek = (time: number) => {
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  audio.currentTime = time;
+  setCurrentTime(time);
+};
+
 
                                                                                         //openapp
                                                                                     
@@ -588,18 +672,22 @@ return (
                       />
                     ) : app.id === "music" ? (
                       <MusicTitleBar
-                        activeTrack={activeTrack}
-                        isPlaying={isPlaying}
-                        volume={volume}
-                        searchQuery={musicSearch}
-                        onPrev={() => {}}
-                        onPlayPause={() => setIsPlaying((p) => !p)}
-                        onNext={() => {}}
-                        onVolumeChange={setVolume}
-                        onSearchChange={setMusicSearch}
-                      />
-                    ) : undefined
-                  }
+                            activeTrack={activeTrack}
+                            isPlaying={isPlaying}
+                            volume={volume}
+                            searchQuery={musicSearch}
+                            onPlayPause={() => {
+                              if (!activeTrack) return;
+                              setIsPlaying((prev) => !prev);
+                            }}
+                            onSearchChange={setMusicSearch}
+                            onVolumeChange={setVolume}
+                            currentTime={currentTime}
+                            durationSeconds={duration}
+                            onSeek={handleSeek}
+                          />
+                        ) : undefined
+                      }
                   windowBackground="#ffffff"
                   onTitleBarMouseDown={(event) => startDrag(event, app.id)}
                   onTitleBarDoubleClick={() => maximizeApp(app.id)}
@@ -626,6 +714,8 @@ return (
 
       </div> 
     </div>
+
+<audio ref={audioRef} />
 
 <DesktopEasterEgg />
 
