@@ -397,6 +397,7 @@ const formatTime = (time: number) => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            height: "100%",
           }}
         >
           {activeTrack ? (
@@ -408,7 +409,7 @@ const formatTime = (time: number) => {
                 alignItems: "center",
                 justifyContent: "center",
                 minWidth: 0,
-                paddingTop: "2px",
+                paddingTop: "6px",
               }}
             >
               <span
@@ -419,7 +420,7 @@ const formatTime = (time: number) => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   maxWidth: "320px",
-                  lineHeight: "1.1",
+                  lineHeight: "1.05",
                 }}
               >
                 {activeTrack.title}
@@ -434,8 +435,8 @@ const formatTime = (time: number) => {
                   textOverflow: "ellipsis",
                   maxWidth: "320px",
                   lineHeight: "1.1",
-                  marginTop: "2px",
-                  marginBottom: "4px",
+                  marginTop: "1px",
+                  marginBottom: "3px",
                 }}
               >
                 {activeTrack.artist}
