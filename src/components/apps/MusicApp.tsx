@@ -2,7 +2,7 @@
 
 import { useState, memo } from "react";
 
-export type MusicView = "recently-added" | "albums" | "songs" | "artists";
+export type MusicView = "featured" | "recently-added" | "albums" | "songs" | "artists";
 
 export type MusicTrack = {
   id: string;
@@ -85,6 +85,9 @@ const fallbackReleases: MusicRelease[] = [
     ],
   },
 ];
+
+
+
 
 const ReleaseCard = memo(function ReleaseCard({
   release,
@@ -330,6 +333,7 @@ const formatTime = (time: number) => {
           }}
         >
           <button
+            onDoubleClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onPrev}
             style={buttonStyle}
@@ -341,6 +345,7 @@ const formatTime = (time: number) => {
           </button>
 
           <button
+             onDoubleClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onPlayPause}
             style={buttonStyle}
@@ -358,6 +363,7 @@ const formatTime = (time: number) => {
           </button>
 
           <button
+            onDoubleClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onNext}
             style={buttonStyle}
@@ -370,6 +376,7 @@ const formatTime = (time: number) => {
 
           <div
             onMouseDown={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",
@@ -443,6 +450,7 @@ const formatTime = (time: number) => {
               </span>
         
               <div
+                onDoubleClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 style={{
                   width: "100%",
@@ -600,10 +608,13 @@ const formatTime = (time: number) => {
   );
 }
 
+
+
+
 export function MusicApp({
   tracks = fallbackReleases,
   activeTrackId = null,
-  activeView = "recently-added",
+  activeView = "featured",
   searchQuery = "",
   onSelectTrack,
   onViewChange,
@@ -644,6 +655,33 @@ export function MusicApp({
       song.releaseTitle.toLowerCase().includes(q)
     );
   });
+
+const featuredRelease = tracks[0] ?? null;
+
+const featuredTrackIds = [
+  "dancing",
+  "medicine",
+  "stilettos-track",
+  "close-call",
+  "confide",
+];
+
+const allTracks = tracks.flatMap((release) =>
+  release.tracks.map((track) => ({
+    id: track.id,
+    title: track.title,
+    duration: track.duration,
+    audioSrc: track.audioSrc,
+    artist: release.artist,
+    cover: release.cover,
+    source: release.source,
+    releaseTitle: release.title,
+  }))
+);
+
+const featuredTracks = featuredTrackIds
+  .map((id) => allTracks.find((track) => track.id === id))
+  .filter((track): track is (typeof allTracks)[number] => track !== undefined);
 
   const selectedRelease =
     tracks.find((release) => release.id === selectedReleaseId) ?? null;
@@ -707,11 +745,12 @@ export function MusicApp({
 
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {[
-              { id: "recently-added", label: "Recently Added" },
-              { id: "albums", label: "Albums" },
-              { id: "songs", label: "Songs" },
-              { id: "artists", label: "Artists" },
-            ].map((item) => {
+               { id: "featured", label: "Featured" },
+               { id: "recently-added", label: "Recently Added" },
+               { id: "albums", label: "Albums" },
+               { id: "songs", label: "Songs" },
+               { id: "artists", label: "Artists" },
+             ].map((item) => {
               const isActive = activeView === item.id;
 
               return (
@@ -738,7 +777,6 @@ export function MusicApp({
             })}
           </div>
         </div>
-
         <div
           className="music-scroll"
           style={{
@@ -751,12 +789,213 @@ export function MusicApp({
             backgroundColor: "#f7f7f7",
           }}
         >
+
           <div
             style={{
               padding: "24px",
               boxSizing: "border-box",
             }}
           >
+
+            {!selectedReleaseId && activeView === "featured" && (
+              <>
+                <div style={{ padding: "0 8px", marginBottom: "32px" }}>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "340px",
+                      borderRadius: "18px",
+                      overflow: "hidden",
+                      backgroundColor: "#d9d9d9",
+                      position: "relative",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src="/Banner.png"
+                      alt="Featured banner"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+            
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(to top, rgba(0,0,0,0.42), rgba(0,0,0,0.08))",
+                        display: "flex",
+                        alignItems: "flex-end",
+                        padding: "24px",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: "rgba(255,255,255,0.88)",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Featured
+                        </div>
+            
+                        <div
+                          style={{
+                            fontSize: "34px",
+                            fontWeight: 700,
+                            color: "white",
+                            lineHeight: 1,
+                          }}
+                        >
+                          president
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            
+                <div style={{ marginBottom: "36px", padding: "0 8px" }}>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 600,
+                      marginBottom: "14px",
+                      color: "#111",
+                    }}
+                  >
+                    Featured Tracks
+                  </div>
+            
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      borderTop: "1px solid #e2e2e2",
+                    }}
+                  >
+                    {featuredTracks.map((track, index) => (
+                      <button
+                        key={track.id}
+                        onClick={() => onSelectTrack?.(track.id)}
+                        style={{
+                          border: "none",
+                          background: activeTrackId === track.id ? "#ececec" : "transparent",
+                          borderBottom: "1px solid #e2e2e2",
+                          padding: "8px 10px",
+                          textAlign: "left",
+                          cursor: "default",
+                          display: "grid",
+                          gridTemplateColumns: "32px 44px 1fr 56px",
+                          alignItems: "center",
+                          gap: "10px",
+                          fontSize: "12px",
+                          color: "#222",
+                        }}
+                      >
+                        <span style={{ color: "#666" }}>{index + 1}</span>
+            
+                        <img
+                          src={track.cover}
+                          alt={track.title}
+                          style={{
+                            width: "44px",
+                            height: "44px",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+            
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#111",
+                              fontWeight: 500,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {track.title}
+                          </div>
+            
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#666",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {track.releaseTitle}
+                          </div>
+                        </div>
+            
+                        <span
+                          style={{
+                            color: "#666",
+                            textAlign: "right",
+                          }}
+                        >
+                          {track.duration ?? "—"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+            
+                <div style={{ marginBottom: "40px", padding: "0 8px" }}>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 600,
+                      marginBottom: "14px",
+                      color: "#111",
+                    }}
+                  >
+                    Discography
+                  </div>
+            
+                  <div
+                    className="music-scroll"
+                    style={{
+                      display: "flex",
+                      gap: "20px",
+                      overflowX: "auto",
+                      overflowY: "hidden",
+                      paddingBottom: "12px",
+                    }}
+                  >
+                    {tracks.map((release) => {
+                      const isSelected = selectedReleaseId === release.id;
+            
+                      return (
+                        <div
+                          key={release.id}
+                          style={{
+                            width: "170px",
+                            flex: "0 0 170px",
+                          }}
+                        >
+                          <ReleaseCard
+                            release={release}
+                            isSelected={isSelected}
+                            onToggle={handleReleaseToggle}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
             {!selectedReleaseId &&
               (activeView === "recently-added" || activeView === "albums") && (
                 <>

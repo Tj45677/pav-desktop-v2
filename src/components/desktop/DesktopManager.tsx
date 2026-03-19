@@ -14,6 +14,7 @@ import { TerminalApp, TerminalTitleBar } from "@/components/apps/TerminalApp";
 import { usePathname } from "next/navigation";
 import { getStartupConfig } from "@/config/routeConfig";
 
+
 export default function DesktopManager() {
     const [windows, setWindows] = useState(initialWindowState);
     const taskbarIconElements = useRef<Partial<Record<keyof typeof windows, HTMLDivElement | null>>>({});
@@ -23,7 +24,7 @@ export default function DesktopManager() {
     const maximizeAnimationCleanup = useRef<(() => void) | null>(null);
     const [chromeTab, setChromeTab] = useState<"merch" | "about">("merch");
     const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
-    const [musicView, setMusicView] = useState<"recently-added" | "albums" | "songs" | "artists">("recently-added");
+    const [musicView, setMusicView] = useState<"featured" | "recently-added" | "albums" | "songs" | "artists">("featured");
     const [musicSearch, setMusicSearch] = useState("");
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState(70);
@@ -36,6 +37,46 @@ export default function DesktopManager() {
     const startup = getStartupConfig(pathname);
 
     const musicLibrary = [...releasedTracks, ...sessionTracks];
+    const allPlayableTracks: MusicTrack[] = musicLibrary.flatMap((release) =>
+      release.tracks.map((track) => ({
+        id: track.id,
+        title: track.title,
+        duration: track.duration,
+        audioSrc: track.audioSrc,
+        artist: release.artist,
+        cover: release.cover,
+        source: release.source,
+      }))
+    );
+
+    const playTrackByIndex = (index: number) => {
+      const track = allPlayableTracks[index];
+      if (!track) return;
+    
+      setActiveTrack(track);
+      setActiveTrackId(track.id);
+      setIsPlaying(true);
+    };
+    
+    const handleNextTrack = () => {
+      if (!activeTrackId || allPlayableTracks.length === 0) return;
+    
+      const currentIndex = allPlayableTracks.findIndex((track) => track.id === activeTrackId);
+      if (currentIndex === -1) return;
+    
+      const nextIndex = (currentIndex + 1) % allPlayableTracks.length;
+      playTrackByIndex(nextIndex);
+    };
+    
+    const handlePrevTrack = () => {
+      if (!activeTrackId || allPlayableTracks.length === 0) return;
+    
+      const currentIndex = allPlayableTracks.findIndex((track) => track.id === activeTrackId);
+      if (currentIndex === -1) return;
+    
+      const prevIndex = (currentIndex - 1 + allPlayableTracks.length) % allPlayableTracks.length;
+      playTrackByIndex(prevIndex);
+    };
 
 
 const [minimizeTransforms, setMinimizeTransforms] = useState<
@@ -670,7 +711,7 @@ return (
         }} 
       > 
           {desktopApps
-            .filter((app) => windows[app.id].isOpen && !windows[app.id].isMinimized) 
+            .filter((app) => windows[app.id].isOpen)
             .map((app) => {
                 const defaultWidth = app.defaultWidth ?? 900;
                 const defaultHeight = app.defaultHeight ?? 600;
@@ -689,6 +730,7 @@ return (
                   width: windows[app.id].isMaximized ? "100vw" : `${defaultWidth}px`,
                   height: windows[app.id].isMaximized ? "calc(100vh - 48px)" : `${defaultHeight}px`,
                   zIndex: windows[app.id].zIndex,
+                  display: windows[app.id].isMinimized ? "none" : "block",
                   userSelect: "none",
                   transform: windows[app.id].isMinimizing
                     ? minimizeTransforms[app.id] ?? "translate(0px, 0px) scale(1)"
@@ -730,6 +772,8 @@ return (
                           if (!activeTrack) return;
                           setIsPlaying((prev) => !prev);
                         }}
+                        onPrev={handlePrevTrack}
+                        onNext={handleNextTrack}
                         onSearchChange={setMusicSearch}
                         onVolumeChange={setVolume}
                         onSeek={handleSeek}

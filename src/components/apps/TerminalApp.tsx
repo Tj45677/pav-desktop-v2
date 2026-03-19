@@ -6,6 +6,37 @@ type TerminalLine =
   | { type: "output"; content: string }
   | { type: "input"; content: string };
 
+const renderFormattedText = (text: string) => {
+  const lines = text.split("\n");
+
+  return lines.map((line, lineIndex) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+
+    return (
+      <span key={lineIndex}>
+        {parts.map((part, partIndex) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return (
+              <span
+                key={partIndex}
+                style={{
+                  fontWeight: 700,
+                  color: "#ffffff",
+                }}
+              >
+                {part.slice(2, -2)}
+              </span>
+            );
+          }
+
+          return <span key={partIndex}>{part}</span>;
+        })}
+        {lineIndex < lines.length - 1 ? "\n" : null}
+      </span>
+    );
+  });
+};
+
 export function TerminalTitleBar() {
   return (
     <div
@@ -57,177 +88,174 @@ Type 'help' to get started.`,
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const projectItems = useMemo(
-    () => [
-      `Project [1/3]
+      const projectItems = useMemo(
+  () => [
+    `Project [1/4]
 
 Interactive Desktop Web Application Platform
+Independent Project — Remote
+March 2026
 
-- Built a desktop-style OS-inspired web app using Next.js, React, and TypeScript
-- Implemented reusable window management with minimize, maximize, focus, and layering
-- Developed modular applications including music player, browser, and terminal
-- Added route-based startup behavior for direct desktop entry points
-- Implemented real audio playback, track management, custom media controls, and a command-driven terminal
+- Built a desktop-style web application simulating an operating system interface using **Next.js** and **React**
+- Developed a reusable window system with **minimize/maximize**, **z-index layering**, and **state-driven UI**
+- Implemented modular applications including a **music player**, **browser**, and **terminal**
+- Designed **route-based state mapping** for deep linking and scalable navigation
+- Structured the project using **component-based architecture** for maintainability and expansion
+- Deployed the production build using **Vercel**
+- Repository: **github.com/Tj45677/pav-desktop-v2/tree/main**
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Project [2/3]
+
+    `Project [2/4]
 
 Private Cloud File Hosting Platform
+Independent Collaboration — Remote
+Sept 2025
 
-- Deployed Linux-based backend infrastructure with Docker Compose
-- Configured Authentik SSO and secure service access
-- Built redundant ZFS-backed storage
-- Automated deployment and maintenance workflows
+- Deployed **Linux-based infrastructure** supporting multi-user file storage and hosted services
+- Orchestrated services using **Docker Compose** for scalable container management
+- Configured **SSO (Authentik)** to centralize authentication and improve access security
+- Implemented **DNS routing**, **firewall rules**, and container-level access controls
+- Built redundant storage using **ZFS** to protect data integrity and reduce risk of data loss
+- Automated deployment workflows to improve consistency and reduce manual setup time
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Project [3/3]
+
+    `Project [3/4]
 
 Enterprise Network & Server Infrastructure Project
+Algonquin College — Ottawa, ON
+Jan 2023 – Apr 2023
 
-- Configured OSPF, BGP, VLAN segmentation, and firewall rules
-- Administered Windows Server services including AD, DNS, DHCP, and Exchange
-- Used Python and SQL for monitoring and data management
+- Designed and deployed a multi-server environment simulating enterprise infrastructure
+- Configured **OSPF**, **BGP**, and **VLAN segmentation** for WAN routing and network isolation
+- Administered **Windows Server** services including **Active Directory**, **DNS**, and **DHCP**
+- Deployed **virtualization environments** for scalable hosting and testing
+- Automated monitoring and data handling using **Python** and **SQL**
 
 Press Enter for next entry
 Press Escape to exit`,
-    ],
-    []
-  );
 
+    `Project [4/4]
+
+Independent Music Producer & Audio Engineer
+Self Directed — Ottawa, ON
+2021 – Present
+
+- Designed and built a recording setup using **XLR signal chain**, **audio interface**, and **DAW** integration
+- Recorded, mixed, and mastered audio using **Steinberg Cubase**
+- Applied **signal processing** and routing throughout the production workflow
+- Managed full production pipeline including recording, editing, mixing, and mastering
+- Organized digital assets and distribution workflows for released music projects
+- Produced multimedia content including video and visual assets for releases
+
+Press Enter for next entry
+Press Escape to exit`,
+  ],
+  []
+);
   const experienceItems = useMemo(
     () => [
-      `Experience [1/9]
+      `Experience [1/6]
+
+Barber — Spark Barbershop
+Gatineau, QC
+Jan 2026 – Present
+
+- Managed **end-to-end operations** including scheduling, payments, inventory, and customer communication
+- Controlled **budgeting** and supply purchasing to maintain cost efficiency
+- Built strong client relationships through **customer service** and attention to detail
+- Continuously improved techniques through **iterative training** and feedback
+
+Press Enter for next entry
+Press Escape to exit`,
+
+    `Experience [2/6]
 
 Vehicle Salesman — Southbank Dodge
 Ottawa, ON
 Nov 2025 – Present
 
-- Assisted customers in selecting new and used vehicles based on needs, budget, and preferred features
-- Explained specs, trim levels, financing options, and warranties clearly
-- Conducted test drives and walk-around demonstrations
-- Managed inquiries, follow-ups, and appointment scheduling
-- Coordinated with finance and service departments for smooth delivery
+- Assisted customers through **needs analysis** to match vehicles based on budget and requirements
+- Explained **technical specifications**, trims, financing, and warranties clearly
+- Conducted test drives and structured product demonstrations
+- Managed **lead pipeline**, follow-ups, and appointment scheduling
+- Coordinated with finance and service teams for smooth **cross-department delivery**
 - Maintained product knowledge across Dodge, Jeep, Chrysler, and RAM
-- Built rapport to drive repeat business, reviews, and referrals
+- Built rapport driving **client retention**, referrals, and repeat business
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Experience [2/9]
+
+    `Experience [3/6]
 
 Sales Representative — Ottawa Fight and Fitness
 Ottawa, ON
 Aug 2025 – Present
 
-- Converted Instagram advertising leads into clients through rapid follow-up and sales calls
-- Managed lead communication, booking, and follow-ups for intro sessions
-- Adapted sales strategy based on client needs and fit
-- Collaborated with trainers to support in-person conversions
-- Tracked performance and refined timing to improve close rates
-- Maintained a professional and supportive client experience
+- Converted **inbound marketing leads** (Instagram ads) through rapid response and sales calls
+- Managed full **lead lifecycle** including communication, scheduling, and follow-ups
+- Adapted sales strategy based on **client intent** and engagement level
+- Collaborated with trainers for seamless **handoff and conversion**
+- Monitored **conversion rates** and optimized call timing for performance
+- Maintained professional communication to build long-term memberships
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Experience [3/9]
+
+    `Experience [4/6]
 
 Barber — Basement Barber
 Ottawa, ON
 Sept 2023 – July 2025
 
-- Built a loyal client base through consistent, personalized service
-- Managed scheduling, payments, inventory, and customer communication
-- Promoted services through Instagram and referrals
-- Maintained hygiene and safety standards with Barbicide COVID-19 Certification
-- Managed budgeting and supply purchasing
-- Strengthened retention through professionalism and attention to detail
+- Grew a loyal client base through **client retention strategies** and consistent service
+- Managed operations including scheduling, payments, inventory, and communication
+- Leveraged **social media marketing (Instagram)** to increase bookings (80%+ repeat clients)
+- Maintained **health and safety compliance** (Barbicide Certification)
+- Controlled budgeting and supply management to maintain accessibility
+- Strengthened client relationships through professionalism and reliability
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Experience [4/9]
 
-Independent Music Producer & Multimedia Artist — Self-Employed
-Remote
-Sept 2023 – Present
-
-- Wrote, produced, recorded, edited, and mixed original music
-- Directed and produced music videos from concept to edit
-- Created promotional visual assets and branding
-- Managed end-to-end creative workflows and release timelines
-- Distributed music across digital platforms and supported audience growth
-
-Press Enter for next entry
-Press Escape to exit`,
-      `Experience [5/9]
+    `Experience [5/6]
 
 Automotive Technician — True Auto Service
 Ottawa, ON
 July 2020 – Sept 2023
 
-- Performed mechanical repairs and routine maintenance
-- Assisted with welding and fabrication tasks
-- Managed invoicing, quoting, and sales tracking in QuickBooks
-- Coordinated parts inventory and vendor ordering
-- Communicated repair issues and timelines clearly to customers
+- Diagnosed issues using **system-level troubleshooting** across mechanical systems
+- Performed repairs on **drivetrain, braking, and suspension systems**
+- Conducted routine maintenance ensuring system performance and reliability
+- Assisted with **welding and fabrication** for structural repairs
+- Managed operations including invoicing and tracking using **QuickBooks**
+- Coordinated parts inventory and vendor sourcing to reduce downtime
+- Communicated technical issues and solutions clearly to customers
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Experience [6/9]
 
-Dedicated Minecraft Server Hosting Infrastructure — Algonquin College
-Ottawa, ON
-Jan 2023 – Apr 2023
-
-- Built and maintained dedicated server infrastructure for hosted Minecraft services
-- Configured virtualization, storage, and networking for multiple instances
-- Applied enterprise routing, redundancy, and security controls
-- Administered Windows Server, Azure integration, and Exchange
-- Used SQL and Python for monitoring and player data management
-- Maintained DNS, DHCP, web, and email services
-
-Press Enter for next entry
-Press Escape to exit`,
-      `Experience [7/9]
+    `Experience [6/6]
 
 Barber — Phresh Men’s Salon
 Ottawa, ON
 Nov 2019 – July 2020
 
-- Delivered high-quality haircuts and grooming in a fast-paced environment
-- Managed front desk duties and POS transactions
+- Delivered high-volume service in a fast-paced environment
+- Maintained **sanitation and public health standards**
+- Managed front desk operations including scheduling and **point-of-sale systems**
 - Built repeat clientele through personalized service
-- Supported day-to-day shop operations and sanitation
+- Operated within a **commission-based performance model**
+- Supported team operations including restocking and tool maintenance
 
 Press Enter for next entry
 Press Escape to exit`,
-      `Experience [8/9]
-
-Poll Clerk — Elections Canada
-Ottawa, ON
-Oct 2019
-
-- Registered voters and verified identification
-- Issued and collected ballots while maintaining procedure and accuracy
-- Assisted with polling station setup, closeout, and vote-counting documentation
-
-Press Enter for next entry
-Press Escape to exit`,
-      `Experience [9/9]
-
-Technician — RB Computing Inc.
-Ottawa, ON
-Sept 2017 – Jan 2018
-
-- Assembled and repaired desktop computers
-- Performed secure data destruction
-- Diagnosed hardware issues and explained repair options to customers
-- Maintained organized and safe technical workspaces
-
-Press Enter for next entry
-Press Escape to exit`,
-    ],
-    []
-  );
+  ],
+  []
+);
 
   const commands = useMemo(
     () => ({
@@ -373,7 +401,7 @@ Type 'help' to see available commands.`;
                   fontSize: "inherit",
                 }}
               >
-                {line.content}
+                {renderFormattedText(line.content)}
               </pre>
             )}
           </div>
