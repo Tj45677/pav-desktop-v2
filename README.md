@@ -1,4 +1,4 @@
-# President AudioVisual — Interactive Desktop Platform
+# President Audio Visual Interactive Desktop Platform
 
 An interactive desktop-style web application built with Next.js, React, and TypeScript.
 
