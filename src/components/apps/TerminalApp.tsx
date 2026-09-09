@@ -162,7 +162,7 @@ Press Escape to exit`,
 
 Barber — Spark Barbershop
 Gatineau, QC
-Jan 2026 – Present
+Dec 2025 – May 2026
 
 - Managed **end-to-end operations** including scheduling, payments, inventory, and customer communication
 - Controlled **budgeting** and supply purchasing to maintain cost efficiency
@@ -176,7 +176,7 @@ Press Escape to exit`,
 
 Vehicle Salesman — Southbank Dodge
 Ottawa, ON
-Nov 2025 – Present
+Nov 2025 – Dec 2025
 
 - Assisted customers through **needs analysis** to match vehicles based on budget and requirements
 - Explained **technical specifications**, trims, financing, and warranties clearly
@@ -193,7 +193,7 @@ Press Escape to exit`,
 
 Sales Representative — Ottawa Fight and Fitness
 Ottawa, ON
-Aug 2025 – Present
+Aug 2025 – Nov 2025
 
 - Converted **inbound marketing leads** (Instagram ads) through rapid response and sales calls
 - Managed full **lead lifecycle** including communication, scheduling, and follow-ups
@@ -210,6 +210,7 @@ Press Escape to exit`,
 Barber — Basement Barber
 Ottawa, ON
 Sept 2023 – July 2025
+May 2026 - Present
 
 - Grew a loyal client base through **client retention strategies** and consistent service
 - Managed operations including scheduling, payments, inventory, and communication
