@@ -5,10 +5,10 @@ type StartMenuProps = {
 };
 
 const links = [
-  { label: "Spotify", href: "https://open.spotify.com", icon: "/spotify.png" },
-  { label: "Apple Music", href: "https://music.apple.com", icon: "/applemusic.webp" },
-  { label: "YouTube", href: "https://youtube.com", icon: "/youtube.png" },
-  { label: "Instagram", href: "https://instagram.com", icon: "/instagram.png" },
+  { label: "Spotify", href: "https://open.spotify.com/artist/46RfPAEPoKXJUdQKqVbjyA", icon: "/spotify.png" },
+  { label: "Apple Music", href: "https://music.apple.com/us/artist/president/1707480820", icon: "/applemusic.webp" },
+  { label: "YouTube", href: "https://www.youtube.com/@presidentaudiovisual", icon: "/youtube.png" },
+  { label: "Instagram", href: "https://www.instagram.com/presidentaudiovisual/", icon: "/instagram.png" },
 ];
 
 export default function StartMenu({ onClose }: StartMenuProps) {
