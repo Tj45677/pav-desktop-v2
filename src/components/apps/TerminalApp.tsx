@@ -72,12 +72,15 @@ export function TerminalApp() {
     {
       type: "output",
       content: `SuperShell [Version 1.0.0]
+(c) Taha Korkmaz. All rights reserved.
 
-TJK Interactive Environment
-Session initialized successfully.
-
-Portfolio modules and media tools are available.
-https://tj45677.ca/
+========================================================================
+ WELCOME TO MY INTERACTIVE PORTFOLIO
+========================================================================
+ You are currently accessing the terminal interface for my personal site.
+ Here you can explore my cybersecurity background, technical skills, 
+ work experience, and personal projects.
+========================================================================
 
 Type 'help' to get started.`,
     },
