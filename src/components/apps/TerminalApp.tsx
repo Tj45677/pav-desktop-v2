@@ -95,6 +95,22 @@ Type 'help' to get started.`,
   () => [
     `Project [1/4]
 
+SIEM Log Ingestion & Windows Security Monitoring
+Independent Project — Remote
+November 2026
+
+- Deployed and configured **Splunk Universal Forwarder** to securely ingest local Windows Event Logs into **Splunk Cloud**
+- Established encrypted data transport pipeline via **SSL/TLS** and applied authentication packages (**splunkclouduf.spl**)
+- Engineered custom **SPL queries** to monitor critical authentication events including **Event ID 4625 (failed logons)**
+- Designed an interactive **security monitoring dashboard** to visualize real-time authentication anomalies and trends
+- Resolved service registration faults, corrupt registry keys, and **inputs.conf/outputs.conf** parameters via PowerShell
+- Configured local Windows **Security Audit policies** to ensure accurate event generation and telemetry capture
+- Repository: **github.com/Tj45677/splunk-windows-siem-lab/tree/main**
+
+Press Enter for next entry
+Press Escape to exit`,
+    `Project [2/4]
+
 Interactive Desktop Web Application Platform
 Independent Project — Remote
 March 2026
@@ -110,7 +126,7 @@ March 2026
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [2/4]
+    `Project [3/4]
 
 Private Cloud File Hosting Platform
 Independent Collaboration — Remote
@@ -126,7 +142,7 @@ Sept 2025
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [3/4]
+    `Project [4/4]
 
 Enterprise Network & Server Infrastructure Project
 Algonquin College — Ottawa, ON
@@ -141,7 +157,7 @@ Jan 2023 – Apr 2023
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [4/4]
+    `Project [5/4]
 
 Independent Music Producer & Audio Engineer
 Self Directed — Ottawa, ON
