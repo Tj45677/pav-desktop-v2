@@ -93,7 +93,7 @@ Type 'help' to get started.`,
 
       const projectItems = useMemo(
   () => [
-    `Project [1/4]
+    `Project [1/5]
 
 SIEM Log Ingestion & Windows Security Monitoring
 Independent Project — Remote
@@ -109,7 +109,7 @@ November 2026
 
 Press Enter for next entry
 Press Escape to exit`,
-    `Project [2/4]
+    `Project [2/5]
 
 Interactive Desktop Web Application Platform
 Independent Project — Remote
@@ -126,7 +126,7 @@ March 2026
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [3/4]
+    `Project [3/5]
 
 Private Cloud File Hosting Platform
 Independent Collaboration — Remote
@@ -142,7 +142,7 @@ Sept 2025
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [4/4]
+    `Project [4/5]
 
 Enterprise Network & Server Infrastructure Project
 Algonquin College — Ottawa, ON
@@ -157,7 +157,7 @@ Jan 2023 – Apr 2023
 Press Enter for next entry
 Press Escape to exit`,
 
-    `Project [5/4]
+    `Project [5/5]
 
 Independent Music Producer & Audio Engineer
 Self Directed — Ottawa, ON
