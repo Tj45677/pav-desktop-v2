@@ -105,7 +105,6 @@ November 2026
 - Designed an interactive **security monitoring dashboard** to visualize real-time authentication anomalies and trends
 - Resolved service registration faults, corrupt registry keys, and **inputs.conf/outputs.conf** parameters via PowerShell
 - Configured local Windows **Security Audit policies** to ensure accurate event generation and telemetry capture
-- Repository: **github.com/Tj45677/splunk-windows-siem-lab/tree/main**
 
 Press Enter for next entry
 Press Escape to exit`,
