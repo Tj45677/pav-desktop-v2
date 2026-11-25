@@ -1,23 +1,34 @@
+"use client";
+
+import { useIsMobile } from "@/hooks/useIsMobile";
+
 type DesktopShellProps = {
-    children: React.ReactNode;
+  children: React.ReactNode;
 };
-                                                                                //desktop layout
+
 export default function DesktopShell({ children }: DesktopShellProps) {
-    return (
-        <main
-            style={{
-                minHeight: "100vh",
-                backgroundImage: "url('LAWallpaper.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-                color: "white",
-                fontFamily: "Consolas, monospace",
-                position: "relative",
-                overflow: "hidden",
-            }}
-        >
-            {children}
-        </main>
-    );
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <>{children}</>;
+  }
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#ebe8e1",
+        backgroundImage: "url('/LAWallpaper.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        color: "white",
+        fontFamily: "Consolas, monospace",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </main>
+  );
 }
