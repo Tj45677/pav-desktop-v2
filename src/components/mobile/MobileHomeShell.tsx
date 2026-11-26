@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ALT_COLOR_SCHEMES,
   BaseMode,
@@ -13,6 +13,16 @@ import {
   SOCIAL_LINKS,
 } from "@/config/mobileNav";
 import { designerFont } from "@/config/fonts";
+import type { MusicRelease } from "@/components/apps/MusicApp";
+import MobileMusicView, {
+  ActivePlaybackState,
+  MobileTrack,
+  NextTrackIcon,
+  PauseBarsIcon,
+  PlayTriangleIcon,
+  PrevTrackIcon,
+  useAverageCoverColor,
+} from "@/components/mobile/MobileMusicView";
 
 interface MobileHomeShellProps {
   initialRoute?: MobileRouteId;
@@ -24,15 +34,33 @@ interface MobileHomeShellProps {
   renderPageContent?: (route: MobileRouteId) => React.ReactNode;
 }
 
-const SLIDE = "transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)";
+const SLIDE_MS = 550;
+const DRAWER_MS = 420;
+const SLIDE = `transform ${SLIDE_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`;
+const DRAWER_TRANSITION = `transform ${DRAWER_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`;
+
+// BLEED: how far the background extends above the screen (Claude's fix).
+// SHIFT: how far the window is scrolled on load. A small window scroll is what
+// Safari appears to need for a translucent top bar. Every layer is offset by
+// BLEED + SHIFT, so after the scroll everything sits exactly on screen.
+const BLEED = 200;
+const SHIFT = 24;
+const OFFSET = BLEED + SHIFT;
+
+// Temporary: shows window.scrollY in the bottom-left. Set to false once tested.
+const DEBUG_SCROLL = false;
+
 const ROOT = {
   position: "absolute",
-  top: 0,
+  top: `-${BLEED}px`,
   left: 0,
   width: "100%",
-  height: "100lvh",
+  height: `calc(100lvh + ${OFFSET}px)`,
   overflow: "hidden",
 } as const;
+// Full-height layers: they cover the strip behind Safari's top bar too.
+// Anything with content inside adds OFFSET to its top padding, so the
+// content still lands exactly where it did before.
 const FILL = {
   position: "absolute",
   top: 0,
@@ -42,6 +70,24 @@ const FILL = {
 } as const;
 const FONT = (d: typeof designerFont) =>
   `${d.style.fontFamily}, var(--font-designer), sans-serif`;
+const MUSIC_FONT = `"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif`;
+
+function formatSeconds(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const total = Math.floor(sec);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function ScrollReadout() {
+  const [y, setY] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setY(Math.round(window.scrollY)), 250);
+    return () => clearInterval(t);
+  }, []);
+  return <>scrollY: {y}</>;
+}
 
 function SunWithLinesIcon({
   color = "#535353",
@@ -94,23 +140,29 @@ function MoonCircleIcon({
 function RoundedOptionsIcon({
   fill = "#535353",
   outline = "#ffffff",
+  showOutline = true,
 }: {
   fill?: string;
   outline?: string;
+  showOutline?: boolean;
 }) {
+  const barHeight = showOutline ? 6.5 : 4.8;
+  const barRadius = showOutline ? 3.25 : 2.4;
+  const ys = showOutline ? [2, 10.75, 19.5] : [3.2, 11.6, 20];
+
   return (
-    <svg width="34" height="28" viewBox="0 0 36 28" aria-hidden="true">
-      {[2, 10.75, 19.5].map((y) => (
+    <svg width="32" height="28" viewBox="0 0 36 28" aria-hidden="true">
+      {ys.map((y) => (
         <rect
           key={y}
-          x="2"
+          x="3"
           y={y}
-          width="32"
-          height="6.5"
-          rx="3.25"
+          width="30"
+          height={barHeight}
+          rx={barRadius}
           fill={fill}
-          stroke={outline}
-          strokeWidth="1.6"
+          stroke={showOutline ? outline : "none"}
+          strokeWidth={showOutline ? 1.6 : 0}
         />
       ))}
     </svg>
@@ -161,14 +213,148 @@ export default function MobileHomeShell({
   const [returningHome, setReturningHome] = useState(false);
   const [transitionStarted, setTransitionStarted] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [insideAlbum, setInsideAlbum] = useState(false);
+  const [albumRgb, setAlbumRgb] = useState<string | null>(null);
+
+  const [currentRelease, setCurrentRelease] = useState<MusicRelease | null>(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [playerDrawerMounted, setPlayerDrawerMounted] = useState<boolean>(false);
+  const [playerDrawerActive, setPlayerDrawerActive] = useState<boolean>(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const drawerCloseTimerRef = useRef<number | null>(null);
+
+  // Follow the device's light/dark setting until the visitor taps the
+  // sun/moon button themselves.
+  const [deviceMode, setDeviceMode] = useState<BaseMode | null>(null);
+  const userPickedModeRef = useRef(false);
+  const requestedModeRef = useRef<BaseMode | null>(null);
+
+  const activeTrack: MobileTrack | null = useMemo(() => {
+    if (!currentRelease || !currentRelease.tracks.length) return null;
+    return (currentRelease.tracks[currentTrackIndex] ??
+      currentRelease.tracks[0] ??
+      null) as MobileTrack | null;
+  }, [currentRelease, currentTrackIndex]);
+
+  const activeTrackId = activeTrack?.id ?? "";
+  const activeTrackAudioSrc = activeTrack?.audioSrc ?? "";
+  const playerAvgRgb = useAverageCoverColor(
+    currentRelease?.cover ?? "/inauguration_cover.png"
+  );
+  const displayRgb = albumRgb ?? playerAvgRgb;
 
   const theme = resolveActiveTheme(baseMode, altThemeIndex);
+  
   const modeKey = `${theme.id}-${theme.buttonText}-${theme.outlineColor}`;
   const isSubpageActive =
     activeRoute !== "home" && !pullingRoute && !returningHome;
-  const edgeColor = isSubpageActive ? theme.pageBg : theme.surfaceBg;
   const isDarkTheme = theme.outlineColor === "#000000";
-  const homeBackground = `${theme.surfaceBg} url(${theme.backgroundImage}) center / cover no-repeat`;
+  const edgeColor = isSubpageActive
+    ? insideAlbum && albumRgb
+      ? `rgb(${albumRgb})`
+      : theme.pageBg
+    : theme.surfaceBg;
+  const homeBackground = `${theme.surfaceBg} url(${theme.backgroundImage}) center top / cover no-repeat`;
+
+  const subpageIconColor = insideAlbum
+    ? "#ffffff"
+    : isDarkTheme || baseMode === "dark"
+      ? "#ffffff"
+      : "#535353";
+
+  // Scroll the window by SHIFT once, before the first paint, so the layout
+  // never visibly jumps. No scroll listener (that caused the jitter before).
+  // Turn off Safari's own scroll restoration so reloads behave the same every time.
+  useLayoutEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    const apply = () => {
+      window.scrollTo(0, SHIFT);
+      if (window.scrollY !== SHIFT) {
+        document.documentElement.scrollTop = SHIFT;
+      }
+    };
+    apply();
+    const t = window.setTimeout(apply, 300);
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("orientationchange", apply);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const read = () => setDeviceMode(mq.matches ? "dark" : "light");
+    read();
+    mq.addEventListener("change", read);
+    return () => mq.removeEventListener("change", read);
+  }, []);
+
+  useLayoutEffect(() => {
+    // Skip if we don't know the device mode yet, the visitor chose a mode,
+    // or an easter-egg theme is active.
+    if (deviceMode === null || userPickedModeRef.current || altThemeIndex !== null) {
+      return;
+    }
+    if (baseMode === deviceMode) {
+      requestedModeRef.current = null;
+      return;
+    }
+    // Guard so a double-run (React dev mode) can't toggle twice and cancel out.
+    if (requestedModeRef.current === deviceMode) return;
+    requestedModeRef.current = deviceMode;
+    onToggleBaseMode();
+  }, [deviceMode, baseMode, altThemeIndex, onToggleBaseMode]);
+
+  const handleUserToggleMode = () => {
+    userPickedModeRef.current = true;
+    onToggleBaseMode();
+  };
+
+  const openPlayerDrawer = () => {
+    if (drawerCloseTimerRef.current) {
+      window.clearTimeout(drawerCloseTimerRef.current);
+      drawerCloseTimerRef.current = null;
+    }
+    setPlayerDrawerMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setPlayerDrawerActive(true);
+      });
+    });
+  };
+
+  const closePlayerDrawer = () => {
+    setPlayerDrawerActive(false);
+    if (drawerCloseTimerRef.current) {
+      window.clearTimeout(drawerCloseTimerRef.current);
+    }
+    drawerCloseTimerRef.current = window.setTimeout(() => {
+      setPlayerDrawerMounted(false);
+      drawerCloseTimerRef.current = null;
+    }, DRAWER_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (drawerCloseTimerRef.current) {
+        window.clearTimeout(drawerCloseTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeRoute !== "music") {
+      setInsideAlbum(false);
+      setAlbumRgb(null);
+    }
+  }, [activeRoute]);
 
   useEffect(() => {
     if (!pullingRoute && !returningHome) {
@@ -185,8 +371,91 @@ export default function MobileHomeShell({
     };
   }, [pullingRoute, returningHome]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !activeTrackAudioSrc) return;
+
+    audio.src = encodeURI(activeTrackAudioSrc);
+    audio.load();
+    setCurrentTime(0);
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false));
+    }
+  }, [activeTrackId, activeTrackAudioSrc]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !activeTrackAudioSrc) return;
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false));
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying, activeTrackAudioSrc]);
+
+  const handlePlayTrack = (release: MusicRelease, index: number) => {
+    if (!release.tracks[index]) return;
+    const sameTrack =
+      currentRelease?.id === release.id && currentTrackIndex === index;
+
+    setCurrentRelease(release);
+    setCurrentTrackIndex(index);
+
+    if (sameTrack) {
+      setIsPlaying((prev) => !prev);
+    } else {
+      setIsPlaying(true);
+    }
+  };
+
+  const handleNextTrack = () => {
+    if (!currentRelease || !currentRelease.tracks.length) return;
+    const nextIdx = (currentTrackIndex + 1) % currentRelease.tracks.length;
+    setCurrentTrackIndex(nextIdx);
+    setIsPlaying(true);
+  };
+
+  const handlePrevTrack = () => {
+    if (!currentRelease || !currentRelease.tracks.length) return;
+    const audio = audioRef.current;
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      setCurrentTime(0);
+      return;
+    }
+    const prevIdx =
+      (currentTrackIndex - 1 + currentRelease.tracks.length) %
+      currentRelease.tracks.length;
+    setCurrentTrackIndex(prevIdx);
+    setIsPlaying(true);
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextTime = Number(e.target.value);
+    setCurrentTime(nextTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = nextTime;
+    }
+  };
+
+  const playbackState: ActivePlaybackState | null =
+    activeTrack && currentRelease
+      ? {
+          release: currentRelease,
+          track: activeTrack,
+          trackIndex: currentTrackIndex,
+          isPlaying,
+          currentTime,
+          duration,
+          avgRgb: playerAvgRgb,
+        }
+      : null;
+
   const handleSelectRoute = (route: MobileRouteId) => {
     setDrawerOpen(false);
+    closePlayerDrawer();
 
     if (route === activeRoute && !returningHome) return;
 
@@ -200,7 +469,7 @@ export default function MobileHomeShell({
         setReturningHome(false);
         setTransitionStarted(false);
         onNavigateRoute?.("home");
-      }, 560);
+      }, SLIDE_MS + 10);
       return;
     }
 
@@ -212,8 +481,27 @@ export default function MobileHomeShell({
       setPullingRoute(null);
       setTransitionStarted(false);
       onNavigateRoute?.(route);
-    }, 560);
+    }, SLIDE_MS + 10);
   };
+
+  useEffect(() => {
+    const preventGesture = (e: Event) => e.preventDefault();
+    const preventPinch = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("gesturestart", preventGesture, { passive: false });
+    window.addEventListener("gesturechange", preventGesture, { passive: false });
+    document.addEventListener("touchmove", preventPinch, { passive: false });
+
+    return () => {
+      window.removeEventListener("gesturestart", preventGesture);
+      window.removeEventListener("gesturechange", preventGesture);
+      document.removeEventListener("touchmove", preventPinch);
+    };
+  }, []);
 
   return (
     <div
@@ -228,25 +516,53 @@ export default function MobileHomeShell({
       <style>{`
         html, body {
           margin: 0;
+          padding: 0;
+          width: 100%;
           height: 100%;
-          overflow: hidden !important;
+          overflow: hidden;
           overscroll-behavior: none;
           background: ${edgeColor} !important;
           color-scheme: ${isDarkTheme ? "dark" : "light"};
         }
       `}</style>
 
+      {DEBUG_SCROLL && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 140,
+            left: 8,
+            zIndex: 99,
+            background: "#000",
+            color: "#fff",
+            fontSize: 11,
+            padding: "2px 5px",
+          }}
+        >
+          <ScrollReadout />
+        </div>
+      )}
+
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+        onEnded={handleNextTrack}
+      />
+
+      {/* Top-right options button aligned with subpage back chevron */}
       <button
         type="button"
         aria-label="Open menu"
         onClick={() => setDrawerOpen((prev) => !prev)}
         style={{
           position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0px) + 18px)",
+          top: "calc(env(safe-area-inset-top, 0px) + 14px)",
           right: "18px",
-          zIndex: 40,
-          width: "44px",
-          height: "44px",
+          zIndex: 65,
+          width: "40px",
+          height: "40px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -257,8 +573,9 @@ export default function MobileHomeShell({
         }}
       >
         <RoundedOptionsIcon
-          fill={theme.buttonText}
+          fill={isSubpageActive ? subpageIconColor : theme.buttonText}
           outline={theme.outlineColor}
+          showOutline={!isSubpageActive}
         />
       </button>
 
@@ -272,6 +589,8 @@ export default function MobileHomeShell({
             flexDirection: "column",
             justifyContent: "center",
             paddingLeft: "20px",
+            paddingTop: `${OFFSET}px`,
+            paddingBottom: "110px",
             gap: "44px",
             background: returningHome ? homeBackground : "transparent",
             willChange: "transform",
@@ -329,7 +648,9 @@ export default function MobileHomeShell({
           style={{
             position: "fixed",
             right: "18px",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+            bottom: playbackState
+              ? "calc(env(safe-area-inset-bottom, 0px) + 128px)"
+              : "calc(env(safe-area-inset-bottom, 0px) + 74px)",
             zIndex: 30,
             background: "transparent",
             border: "none",
@@ -367,48 +688,392 @@ export default function MobileHomeShell({
           style={{
             ...FILL,
             zIndex: 20,
-            overflowY: "auto",
+            overflowY: insideAlbum ? "hidden" : "auto",
             overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
             background: theme.pageBg,
             color: theme.pageTextColor,
             padding:
-              "calc(env(safe-area-inset-top, 0px) + 72px) 18px calc(env(safe-area-inset-bottom, 0px) + 84px)",
-            willChange: "transform",
+              `calc(env(safe-area-inset-top, 0px) + ${OFFSET + 80}px) 18px calc(env(safe-area-inset-bottom, 0px) + 180px)`,
             transform: returningHome
               ? transitionStarted
                 ? "translate3d(100%, 0, 0)"
                 : "translate3d(0, 0, 0)"
-              : "translate3d(0, 0, 0)",
+              : undefined,
             transition: returningHome ? SLIDE : "none",
           }}
         >
-          <button
-            key={`back-${modeKey}`}
-            type="button"
-            onClick={() => handleSelectRoute("home")}
-            style={{
-              marginBottom: "16px",
-              padding: "4px 10px",
-              fontFamily: FONT(designerFont),
-              backgroundColor: "transparent",
-              color: theme.buttonText,
-              textShadow: theme.textOutline,
-              WebkitTextStroke: `1px ${theme.outlineColor}`,
-              paintOrder: "stroke fill",
-              border: "none",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            ← HOME
-          </button>
+          {/* Subpage back button pinned to the same top row as the options button */}
+          {!insideAlbum && (
+            <button
+              key={`back-${modeKey}`}
+              type="button"
+              aria-label="Back to home"
+              onClick={() => handleSelectRoute("home")}
+              style={{
+                position: "fixed",
+                top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+                left: "18px",
+                zIndex: 64,
+                width: "40px",
+                height: "40px",
+                padding: 0,
+                backgroundColor: "transparent",
+                color: subpageIconColor,
+                border: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                cursor: "pointer",
+              }}
+            >
+              <svg width="13" height="22" viewBox="0 0 13 22" fill="none">
+                <path
+                  d="M11 2L2 11L11 20"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
 
-          {renderPageContent ? (
+          {activeRoute === "music" ? (
+            <MobileMusicView
+              baseMode={baseMode}
+              isDarkTheme={isDarkTheme}
+              playback={playbackState}
+              onPlayTrack={handlePlayTrack}
+              onAlbumOpenChange={setInsideAlbum}
+              onAlbumRgbChange={setAlbumRgb}
+            />
+          ) : renderPageContent ? (
             renderPageContent(activeRoute)
           ) : (
             <div>{activeRoute.toUpperCase()}</div>
           )}
         </section>
+      )}
+
+      {playbackState && !playerDrawerMounted && (
+        <div
+          onClick={openPlayerDrawer}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") openPlayerDrawer();
+          }}
+          style={{
+            position: "fixed",
+            left: "12px",
+            right: "12px",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+            zIndex: 60,
+            padding: "9px 14px",
+            borderRadius: "14px",
+            background: `rgba(${displayRgb}, 0.72)`,
+            border: "1px solid rgba(255, 255, 255, 0.22)",
+            boxShadow: "0 1px 6px rgba(0, 0, 0, 0.28)",
+            color: "#ffffff",
+            fontFamily: MUSIC_FONT,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            cursor: "pointer",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
+            <img
+              src={playbackState.release.cover}
+              alt={playbackState.track.title}
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "6px",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {playbackState.track.title}
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  opacity: 0.82,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {playbackState.release.title}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            aria-label={playbackState.isPlaying ? "Pause" : "Play"}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPlaying((prev) => !prev);
+            }}
+            style={{
+              width: "36px",
+              height: "36px",
+              border: "none",
+              background: "transparent",
+              color: "#ffffff",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            {playbackState.isPlaying ? (
+              <PauseBarsIcon size={15} />
+            ) : (
+              <PlayTriangleIcon size={16} />
+            )}
+          </button>
+        </div>
+      )}
+
+      {playerDrawerMounted && playbackState && (
+        <div
+          onClick={closePlayerDrawer}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 52,
+            background: "rgba(0, 0, 0, 0.48)",
+            opacity: playerDrawerActive ? 1 : 0,
+            transition: `opacity ${DRAWER_MS}ms ease`,
+          }}
+        />
+      )}
+
+      {playerDrawerMounted && playbackState && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            top: "calc(env(safe-area-inset-top, 0px) + 72px)",
+            bottom: 0,
+            zIndex: 55,
+            background: `rgba(${displayRgb}, 0.58)`,
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            color: "#ffffff",
+            fontFamily: MUSIC_FONT,
+            padding: "16px 22px calc(env(safe-area-inset-bottom, 0px) + 74px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "20px",
+            transform: playerDrawerActive
+              ? "translate3d(0, 0, 0)"
+              : "translate3d(0, 100%, 0)",
+            transition: DRAWER_TRANSITION,
+            willChange: "transform",
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Collapse player"
+            onClick={closePlayerDrawer}
+            style={{
+              width: "42px",
+              height: "5px",
+              borderRadius: "999px",
+              background: "rgba(255, 255, 255, 0.55)",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+            }}
+          />
+
+          <div
+            style={{
+              width: playerDrawerActive ? "min(76vw, 292px)" : "42px",
+              aspectRatio: "1 / 1",
+              borderRadius: playerDrawerActive ? "12px" : "6px",
+              overflow: "hidden",
+              boxShadow: "0 18px 40px rgba(0, 0, 0, 0.36)",
+              transform: playerDrawerActive
+                ? "translate3d(0, 0, 0)"
+                : "translate3d(-34vw, 24vh, 0)",
+              transition: `width ${DRAWER_MS}ms cubic-bezier(0.16, 1, 0.3, 1), border-radius ${DRAWER_MS}ms cubic-bezier(0.16, 1, 0.3, 1), transform ${DRAWER_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+              willChange: "transform, width",
+            }}
+          >
+            <img
+              src={playbackState.release.cover}
+              alt={playbackState.release.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "340px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              opacity: playerDrawerActive ? 1 : 0,
+              transition: `opacity ${Math.round(DRAWER_MS * 0.75)}ms ease`,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "21px",
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                }}
+              >
+                {playbackState.track.title}
+              </div>
+              <div style={{ fontSize: "14px", opacity: 0.82, marginTop: "3px" }}>
+                {playbackState.release.title} · {playbackState.release.artist}
+              </div>
+            </div>
+
+            <div>
+              <input
+                type="range"
+                min={0}
+                max={playbackState.duration || 100}
+                value={Math.min(
+                  playbackState.currentTime,
+                  playbackState.duration || 100
+                )}
+                onChange={handleSeek}
+                aria-label="Seek track"
+                style={{
+                  width: "100%",
+                  accentColor: "#ffffff",
+                  cursor: "pointer",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  opacity: 0.82,
+                  marginTop: "2px",
+                }}
+              >
+                <span>{formatSeconds(playbackState.currentTime)}</span>
+                <span>
+                  -
+                  {formatSeconds(
+                    Math.max(
+                      (playbackState.duration || 0) - playbackState.currentTime,
+                      0
+                    )
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-around",
+                paddingTop: "4px",
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Previous track"
+                onClick={handlePrevTrack}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ffffff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  padding: "8px 14px",
+                }}
+              >
+                <PrevTrackIcon size={22} />
+              </button>
+
+              <button
+                type="button"
+                aria-label={playbackState.isPlaying ? "Pause" : "Play"}
+                onClick={() => setIsPlaying((prev) => !prev)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ffffff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  padding: "8px 18px",
+                }}
+              >
+                {playbackState.isPlaying ? (
+                  <PauseBarsIcon size={24} />
+                ) : (
+                  <PlayTriangleIcon size={26} />
+                )}
+              </button>
+
+              <button
+                type="button"
+                aria-label="Next track"
+                onClick={handleNextTrack}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ffffff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  padding: "8px 14px",
+                }}
+              >
+                <NextTrackIcon size={22} />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {drawerOpen && (
@@ -423,7 +1088,7 @@ export default function MobileHomeShell({
           position: "absolute",
           top: 0,
           right: 0,
-          height: "100%",
+          height: `calc(120dvh + ${OFFSET}px)`,
           width: "52%",
           minWidth: "190px",
           zIndex: 50,
@@ -432,7 +1097,7 @@ export default function MobileHomeShell({
           WebkitBackdropFilter: "blur(10px)",
           color: theme.drawerText,
           padding:
-            "calc(env(safe-area-inset-top, 0px) + 115px) 18px calc(env(safe-area-inset-bottom, 0px) + 138px)",
+            `calc(env(safe-area-inset-top, 0px) + ${OFFSET + 75}px) 18px calc(env(safe-area-inset-bottom, 0px) + 140px)`,
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
@@ -450,7 +1115,7 @@ export default function MobileHomeShell({
         >
           <button
             type="button"
-            onClick={onToggleBaseMode}
+            onClick={handleUserToggleMode}
             aria-label={
               baseMode === "light" ? "Turn on dark mode" : "Turn on light mode"
             }
